@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>3d — Home</title>
+    <meta name="description" content="Landing page voor een paar 3D-projecten met afstandslandschap en parallax-effect." />
+    <style>
+      :root{--bg:#071028;--muted:#94a3b8;--accent:#7c3aed}
+      html,body{height:100%;margin:0;background:var(--bg);color:#e6eef8;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+      main{min-height:100vh;padding:40px 20px 60px;box-sizing:border-box}
+
+      /* Hero with parallax layers */
+      .hero{position:relative;overflow:hidden;border-radius:12px;min-height:56vh;background:linear-gradient(180deg, rgba(8,18,34,0.5), rgba(6,10,18,0.7));box-shadow:0 8px 30px rgba(2,6,23,0.7)}
+      .hero-inner{position:relative;z-index:6;max-width:1100px;margin:36px auto;padding:36px;color:#fff;display:flex;gap:24px;align-items:flex-start}
+
+      .parallax{position:absolute;inset:0;z-index:1;pointer-events:none}
+      .layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);will-change:transform}
+      .layer svg{display:block;width:1600px;height:auto}
+
+      h1{font-size:clamp(26px,4vw,44px);margin:0 0 8px}
+      p.lead{color:var(--muted);margin:0 0 14px}
+      a{color:var(--accent)}
+
+      /* Projects */
+      .projects{max-width:1100px;margin:28px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+      .card{background:rgba(255,255,255,0.03);padding:14px;border-radius:10px}
+
+      footer{color:var(--muted);text-align:center;margin-top:36px}
+
+      @media (max-width:720px){.hero-inner{flex-direction:column;padding:20px}}
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-label="Hero met parallax achtergrond">
+        <div class="parallax" aria-hidden="true">
+          <!-- very far: depth 0.12 -->
+          <div class="layer" data-depth="0.12" style="width:200%;height:60%;top:60%">
+            <svg viewBox="0 0 1600 400" preserveAspectRatio="none" aria-hidden="true">
+              <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#041428"/><stop offset="1" stop-color="#05233a"/></linearGradient></defs>
+              <path d="M0,300 C200,200 400,230 600,260 C800,290 1000,220 1200,240 C1400,260 1600,220 1600,220 L1600,400 L0,400 Z" fill="url(#g1)"/>
+            </svg>
+          </div>
+          <!-- mid: depth 0.35 -->
+          <div class="layer" data-depth="0.35" style="width:220%;height:64%;top:72%">
+            <svg viewBox="0 0 1600 420" preserveAspectRatio="none" aria-hidden="true">
+              <defs><linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#052037"/><stop offset="1" stop-color="#06324a"/></linearGradient></defs>
+              <path d="M0,320 C180,240 380,260 560,300 C740,340 900,260 1100,300 C1300,340 1500,300 1600,300 L1600,420 L0,420 Z" fill="url(#g2)"/>
+            </svg>
+          </div>
+          <!-- near: depth 0.7 -->
+          <div class="layer" data-depth="0.7" style="width:260%;height:74%;top:88%">
+            <svg viewBox="0 0 1600 520" preserveAspectRatio="none" aria-hidden="true">
+              <defs><linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#06242f"/><stop offset="1" stop-color="#063842"/></linearGradient></defs>
+              <path d="M0,380 C120,320 260,340 420,360 C580,380 760,320 980,360 C1200,400 1400,360 1600,360 L1600,520 L0,520 Z" fill="url(#g3)"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="hero-inner">
+          <div>
+            <h1>Welkom bij het 3D-project</h1>
+            <p class="lead">Een kleine verzameling demo's met afstandslandschappen en parallax-interacties. Beweeg je muis of scroll om het effect te zien.</p>
+            <p><a href="#projects">Bekijk projecten</a> · <a href="README.md">README</a></p>
+          </div>
+          <div style="margin-left:auto;min-width:220px;color:var(--muted)">
+            <p style="margin:0 0 8px;font-weight:600">Snelstart</p>
+            <pre style="background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;margin:0;color:#cfe6ff">python3 -m http.server 8000</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="projects" class="projects">
+        <article class="card"><h3>Low-Poly Landscape</h3><p>Interactieve GLSL-demo met diepte.</p></article>
+        <article class="card"><h3>Procedural Terrain</h3><p>WebGL-terrain met noise.</p></article>
+        <article class="card"><h3>Camera Flythrough</h3><p>Korte camera-tour door een 3D-scène.</p></article>
+      </section>
+
+      <footer>
+        <p>Gemaakt op: <span id="date">--</span> — meer in <a href="README.md">README</a>.</p>
+      </footer>
+    </main>
+
+    <script>
+      // Parallax: mouse + scroll, simple and lightweight
+      (function(){
+        const layers = Array.from(document.querySelectorAll('.parallax .layer'));
+        if(!layers.length) return;
+
+        let mouseX = 0, mouseY = 0, lastX = 0, lastY = 0, scrollY = window.scrollY;
+        let ticking = false;
+
+        function onMove(e){
+          const clientX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || window.innerWidth/2;
+          const clientY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || window.innerHeight/2;
+          mouseX = (clientX - window.innerWidth/2) / window.innerWidth;
+          mouseY = (clientY - window.innerHeight/2) / window.innerHeight;
+          requestTick();
+        }
+
+        function onScroll(){ scrollY = window.scrollY; requestTick(); }
+
+        function requestTick(){ if(!ticking) { requestAnimationFrame(update); ticking = true; }}
+
+        function update(){
+          lastX += (mouseX - lastX) * 0.08; lastY += (mouseY - lastY) * 0.08;
+          layers.forEach(layer => {
+            const depth = parseFloat(layer.dataset.depth) || 0.3;
+            const x = lastX * depth * 80; // horizontal
+            const y = lastY * depth * 40 + (scrollY * -0.08 * depth); // vertical + subtle scroll
+            const s = 1 - depth * 0.02;
+            layer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${s})`;
+          });
+          ticking = false;
+        }
+
+        window.addEventListener('mousemove', onMove, {passive:true});
+        window.addEventListener('touchmove', onMove, {passive:true});
+        window.addEventListener('scroll', onScroll, {passive:true});
+        requestTick();
+      })();
+
+      // date
+      document.getElementById('date').textContent = new Date().toLocaleString('nl-NL');
+    </script>
+  </body>
+</html>
