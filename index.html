@@ -1,128 +1,304 @@
 <!doctype html>
-<html lang="nl">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>3d — Home</title>
-    <meta name="description" content="Landing page voor een paar 3D-projecten met afstandslandschap en parallax-effect." />
-    <style>
-      :root{--bg:#071028;--muted:#94a3b8;--accent:#7c3aed}
-      html,body{height:100%;margin:0;background:var(--bg);color:#e6eef8;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
-      main{min-height:100vh;padding:40px 20px 60px;box-sizing:border-box}
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Workbench — Retro Desktop</title>
+  <meta name="description" content="A neon 8-bit inspired desktop for the advanced 3D objects and animations workbench." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-1: #071619;
+      --bg-2: #0b252b;
+      --accent: #00f0ff;
+      --accent-2: #7aff6c;
+      --text: #e8fbff;
+      --muted: #9cc7cf;
+      --shadow: 0 20px 45px rgba(0,0,0,0.45);
+      --frame: rgba(0, 240, 255, 0.25);
+    }
 
-      /* Hero with parallax layers */
-      .hero{position:relative;overflow:hidden;border-radius:12px;min-height:56vh;background:linear-gradient(180deg, rgba(8,18,34,0.5), rgba(6,10,18,0.7));box-shadow:0 8px 30px rgba(2,6,23,0.7)}
-      .hero-inner{position:relative;z-index:6;max-width:1100px;margin:36px auto;padding:36px;color:#fff;display:flex;gap:24px;align-items:flex-start}
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: radial-gradient(circle at 20% 20%, rgba(0, 240, 255, 0.08), transparent 28%),
+                  radial-gradient(circle at 80% 10%, rgba(122, 255, 108, 0.08), transparent 22%),
+                  linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+      font-family: 'Space Grotesk', 'Press Start 2P', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
 
-      .parallax{position:absolute;inset:0;z-index:1;pointer-events:none}
-      .layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);will-change:transform}
-      .layer svg{display:block;width:1600px;height:auto}
+    /* scanlines & grid */
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
+                        linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 26px 26px, 26px 26px;
+      mix-blend-mode: screen;
+      opacity: 0.5;
+    }
+    body::after {
+      background: repeating-linear-gradient(transparent 0 2px, rgba(0,0,0,0.15) 2px 4px);
+      opacity: 0.45;
+    }
 
-      h1{font-size:clamp(26px,4vw,44px);margin:0 0 8px}
-      p.lead{color:var(--muted);margin:0 0 14px}
-      a{color:var(--accent)}
+    main {
+      position: relative;
+      z-index: 2;
+      padding: 32px 18px 48px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
 
-      /* Projects */
-      .projects{max-width:1100px;margin:28px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
-      .card{background:rgba(255,255,255,0.03);padding:14px;border-radius:10px}
+    .desktop-status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .leds { display: inline-flex; gap: 6px; }
+    .leds span {
+      width: 12px; height: 12px;
+      border-radius: 2px;
+      background: rgba(0,240,255,0.2);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.9);
+      animation: pulse 2.6s ease-in-out infinite;
+    }
+    .leds span:nth-child(2) { background: rgba(122,255,108,0.35); animation-delay: .3s; }
+    .leds span:nth-child(3) { background: rgba(0,240,255,0.2); animation-delay: .6s; }
+    @keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
 
-      footer{color:var(--muted);text-align:center;margin-top:36px}
+    .desktop {
+      display: grid;
+      grid-template-columns: 260px 1fr 240px;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 960px) { .desktop { grid-template-columns: 1fr; } }
 
-      @media (max-width:720px){.hero-inner{flex-direction:column;padding:20px}}
-    </style>
-  </head>
-  <body>
-    <main>
-      <section class="hero" aria-label="Hero met parallax achtergrond">
-        <div class="parallax" aria-hidden="true">
-          <!-- very far: depth 0.12 -->
-          <div class="layer" data-depth="0.12" style="width:200%;height:60%;top:60%">
-            <svg viewBox="0 0 1600 400" preserveAspectRatio="none" aria-hidden="true">
-              <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#041428"/><stop offset="1" stop-color="#05233a"/></linearGradient></defs>
-              <path d="M0,300 C200,200 400,230 600,260 C800,290 1000,220 1200,240 C1400,260 1600,220 1600,220 L1600,400 L0,400 Z" fill="url(#g1)"/>
-            </svg>
-          </div>
-          <!-- mid: depth 0.35 -->
-          <div class="layer" data-depth="0.35" style="width:220%;height:64%;top:72%">
-            <svg viewBox="0 0 1600 420" preserveAspectRatio="none" aria-hidden="true">
-              <defs><linearGradient id="g2" x1="0" x2="1"><stop offset="0" stop-color="#052037"/><stop offset="1" stop-color="#06324a"/></linearGradient></defs>
-              <path d="M0,320 C180,240 380,260 560,300 C740,340 900,260 1100,300 C1300,340 1500,300 1600,300 L1600,420 L0,420 Z" fill="url(#g2)"/>
-            </svg>
-          </div>
-          <!-- near: depth 0.7 -->
-          <div class="layer" data-depth="0.7" style="width:260%;height:74%;top:88%">
-            <svg viewBox="0 0 1600 520" preserveAspectRatio="none" aria-hidden="true">
-              <defs><linearGradient id="g3" x1="0" x2="1"><stop offset="0" stop-color="#06242f"/><stop offset="1" stop-color="#063842"/></linearGradient></defs>
-              <path d="M0,380 C120,320 260,340 420,360 C580,380 760,320 980,360 C1200,400 1400,360 1600,360 L1600,520 L0,520 Z" fill="url(#g3)"/>
-            </svg>
-          </div>
-        </div>
+    .panel {
+      background: rgba(12, 36, 42, 0.7);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(122,255,108,0.18);
+      border-radius: 9px;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
 
-        <div class="hero-inner">
-          <div>
-            <h1>Welkom bij het 3D-project</h1>
-            <p class="lead">Een kleine verzameling demo's met afstandslandschappen en parallax-interacties. Beweeg je muis of scroll om het effect te zien.</p>
-            <p><a href="#projects">Bekijk projecten</a> · <a href="README.md">README</a></p>
-          </div>
-          <div style="margin-left:auto;min-width:220px;color:var(--muted)">
-            <p style="margin:0 0 8px;font-weight:600">Snelstart</p>
-            <pre style="background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;margin:0;color:#cfe6ff">python3 -m http.server 8000</pre>
+    .panel-header {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      background: linear-gradient(90deg, rgba(0,240,255,0.08), rgba(0,240,255,0.02));
+      border-bottom: 1px solid rgba(0,240,255,0.2);
+    }
+    .panel-header .window-dots { display: flex; gap: 6px; align-items: center; }
+    .panel-header .window-dots span {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,240,255,0.3);
+      box-shadow: 0 0 10px rgba(0,240,255,0.5);
+    }
+
+    .panel-body { padding: 18px; color: var(--text); }
+
+    .launch-list { display: grid; gap: 10px; }
+    .launch-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      font-weight: 600;
+      border: 1px solid rgba(0,240,255,0.2);
+      border-radius: 8px;
+      background: rgba(0, 240, 255, 0.04);
+      color: var(--text);
+      text-decoration: none;
+      transition: 150ms ease;
+      box-shadow: inset 0 0 0 1px rgba(0,240,255,0.06);
+    }
+    .launch-btn:hover { transform: translateY(-2px); border-color: rgba(122,255,108,0.5); box-shadow: 0 8px 22px rgba(0, 240, 255, 0.18); }
+    .launch-btn span.icon { width: 28px; height: 28px; background: rgba(0,240,255,0.18); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 12px; }
+    .launch-btn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+
+    .workbench {
+      height: 100%;
+      background: radial-gradient(circle at 20% 10%, rgba(0,240,255,0.06), transparent 30%), rgba(4, 16, 18, 0.92);
+    }
+    .crt {
+      position: relative;
+      border: 1px solid rgba(0,240,255,0.25);
+      border-radius: 8px;
+      padding: 18px;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.05), rgba(0, 0, 0, 0.45));
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      line-height: 1.8;
+      text-shadow: 0 0 12px rgba(0,240,255,0.35);
+      overflow: hidden;
+      min-height: 300px;
+    }
+    .crt::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(transparent 0%, rgba(0,240,255,0.04) 50%, transparent 100%);
+      background-size: 100% 4px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    .ascii-title { color: var(--accent-2); margin-bottom: 12px; display: inline-block; }
+    .crt ul { list-style: none; padding-left: 0; margin: 12px 0 0; color: var(--muted); }
+    .crt li { margin-bottom: 8px; }
+    .crt .tag { color: var(--accent); }
+
+    .modules { display: grid; gap: 12px; }
+    .module-card {
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px dashed rgba(0,240,255,0.3);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .module-card strong { color: var(--accent); }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(122,255,108,0.35); color: var(--accent-2); font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: 0.06em; }
+
+    .footer { margin-top: 22px; text-align: center; color: var(--muted); font-size: 13px; }
+    .footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="desktop-status" aria-label="system status">
+      <span class="leds" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>Workbench Ready · High-res 3D Toolkit</span>
+      <span style="margin-left:auto">Clock: <span id="clock">--:--</span></span>
+    </div>
+
+    <div class="desktop">
+      <section class="panel">
+        <header class="panel-header">
+          <span>Launch Pad</span>
+          <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        </header>
+        <div class="panel-body">
+          <p style="margin-top:0; color: var(--muted);">Quick boot into the lab tools. Zero purple, all neon grit.</p>
+          <div class="launch-list">
+            <a class="launch-btn" href="#" aria-label="Open scene composer">
+              <span class="icon">SC</span>
+              <div>Scene Composer <small>Draft solids, rigs, and camera rails.</small></div>
+            </a>
+            <a class="launch-btn" href="#" aria-label="Open shader lab">
+              <span class="icon">GL</span>
+              <div>Shader Lab <small>Instant GLSL previews with live diagnostics.</small></div>
+            </a>
+            <a class="launch-btn" href="#" aria-label="Open motion board">
+              <span class="icon">FX</span>
+              <div>Motion Board <small>Timeline tweaks, easing palettes, and keyframe bursts.</small></div>
+            </a>
+            <a class="launch-btn" href="README.md" aria-label="Open README">
+              <span class="icon">IO</span>
+              <div>Docs & README <small>Project boot notes, commands, and specs.</small></div>
+            </a>
           </div>
         </div>
       </section>
 
-      <section id="projects" class="projects">
-        <article class="card"><h3>Low-Poly Landscape</h3><p>Interactieve GLSL-demo met diepte.</p></article>
-        <article class="card"><h3>Procedural Terrain</h3><p>WebGL-terrain met noise.</p></article>
-        <article class="card"><h3>Camera Flythrough</h3><p>Korte camera-tour door een 3D-scène.</p></article>
+      <section class="panel workbench">
+        <header class="panel-header">
+          <span>Neon Workbench · 8-bit Desktop</span>
+          <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        </header>
+        <div class="panel-body">
+          <div class="crt" aria-label="retro terminal">
+            <span class="ascii-title">>>> Advanced 3D Objects & Animations Editor</span>
+            <div>boot sequence... online</div>
+            <div>gpu lanes........... sync</div>
+            <div>asset vault......... mounted</div>
+            <div>shader cores........ awake</div>
+            <ul>
+              <li><span class="tag">[scene]</span> Blank grid ready for new primitives.</li>
+              <li><span class="tag">[render]</span> PBR + stylized channels togglable per pass.</li>
+              <li><span class="tag">[motion]</span> Curves, oscillators, and beat-locked modifiers.</li>
+              <li><span class="tag">[io]</span> Export hooks for glTF, USD, and raw buffers.</li>
+            </ul>
+            <div style="margin-top:16px; color: var(--accent-2);">// drag your imagination onto the grid — no purple allowed.</div>
+          </div>
+        </div>
       </section>
 
-      <footer>
-        <p>Gemaakt op: <span id="date">--</span> — meer in <a href="README.md">README</a>.</p>
-      </footer>
-    </main>
+      <aside class="panel">
+        <header class="panel-header">
+          <span>Modules</span>
+          <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        </header>
+        <div class="panel-body">
+          <div class="modules">
+            <div class="module-card"><strong>Low-Poly Landscape</strong><br><span class="badge">GLSL</span> Distance fields tuned for parallax and fog ramps.</div>
+            <div class="module-card"><strong>Procedural Terrain</strong><br><span class="badge">NOISE</span> Layered ridges, masks, and erosion brush.</div>
+            <div class="module-card"><strong>Camera Flythrough</strong><br><span class="badge">CAM</span> Smoothed spline rails with HUD overlays.</div>
+            <div class="module-card"><strong>Toolkit Server</strong><br><span class="badge">CMD</span> python3 -m http.server 8000</div>
+          </div>
+        </div>
+      </aside>
+    </div>
 
-    <script>
-      // Parallax: mouse + scroll, simple and lightweight
-      (function(){
-        const layers = Array.from(document.querySelectorAll('.parallax .layer'));
-        if(!layers.length) return;
+    <div class="footer">
+      Workbench timestamp: <span id="date">--</span> · Built for the next wave of 3D play.
+    </div>
+  </main>
 
-        let mouseX = 0, mouseY = 0, lastX = 0, lastY = 0, scrollY = window.scrollY;
-        let ticking = false;
+  <script>
+    const clockEl = document.getElementById('clock');
+    const dateEl = document.getElementById('date');
+    function updateClock(){
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString();
+      dateEl.textContent = now.toLocaleString();
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
 
-        function onMove(e){
-          const clientX = e.clientX || (e.touches && e.touches[0] && e.touches[0].clientX) || window.innerWidth/2;
-          const clientY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || window.innerHeight/2;
-          mouseX = (clientX - window.innerWidth/2) / window.innerWidth;
-          mouseY = (clientY - window.innerHeight/2) / window.innerHeight;
-          requestTick();
-        }
-
-        function onScroll(){ scrollY = window.scrollY; requestTick(); }
-
-        function requestTick(){ if(!ticking) { requestAnimationFrame(update); ticking = true; }}
-
-        function update(){
-          lastX += (mouseX - lastX) * 0.08; lastY += (mouseY - lastY) * 0.08;
-          layers.forEach(layer => {
-            const depth = parseFloat(layer.dataset.depth) || 0.3;
-            const x = lastX * depth * 80; // horizontal
-            const y = lastY * depth * 40 + (scrollY * -0.08 * depth); // vertical + subtle scroll
-            const s = 1 - depth * 0.02;
-            layer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${s})`;
-          });
-          ticking = false;
-        }
-
-        window.addEventListener('mousemove', onMove, {passive:true});
-        window.addEventListener('touchmove', onMove, {passive:true});
-        window.addEventListener('scroll', onScroll, {passive:true});
-        requestTick();
-      })();
-
-      // date
-      document.getElementById('date').textContent = new Date().toLocaleString('nl-NL');
-    </script>
-  </body>
+    // subtle cursor glow for desktop vibe
+    document.addEventListener('pointermove', (e) => {
+      const root = document.documentElement;
+      const x = e.clientX / window.innerWidth - 0.5;
+      const y = e.clientY / window.innerHeight - 0.5;
+      root.style.setProperty('--accent', `rgb(${30 + x*120}, ${240 - y*60}, 255)`);
+    }, { passive: true });
+  </script>
+</body>
 </html>
