@@ -1,321 +1,415 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>3D Workbench</title>
-    <meta name="description" content="Retro-futuristic 3D creation workbench with a clean desktop vibe, module launchers, and quickstart tips." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        --bg: #050b13;
-        --bg-dim: #0a1321;
-        --line: rgba(118, 255, 193, 0.14);
-        --accent: #5ef7b3;
-        --accent-2: #68d6ff;
-        --text: #e9f7ff;
-        --muted: #98a7c2;
-        --shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Golden 8-Bit Desk</title>
+  <style>
+    :root {
+      --c0: #0d0a00;
+      --c1: #1b1400;
+      --c2: #332100;
+      --c3: #503300;
+      --c4: #7a4a00;
+      --c5: #a56700;
+      --c6: #d28b00;
+      --c7: #ffd34f;
+      --panel: var(--c2);
+      --frame: var(--c6);
+      --text: var(--c7);
+      --muted: #e6c27a;
+      --grid: rgba(255, 211, 79, 0.12);
+      --pixel: 4px;
+      --radius: 6px;
+    }
 
-      *, *::before, *::after { box-sizing: border-box; }
+    * { box-sizing: border-box; }
 
-      html, body {
-        height: 100%;
-        margin: 0;
-        background: radial-gradient(circle at 20% 20%, rgba(94, 247, 179, 0.08), transparent 26%),
-                    radial-gradient(circle at 80% 30%, rgba(104, 214, 255, 0.12), transparent 32%),
-                    var(--bg);
-        color: var(--text);
-        font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
-        letter-spacing: 0.01em;
-        overflow-x: hidden;
-      }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: 
+        repeating-linear-gradient(0deg, transparent 0, transparent 12px, rgba(255, 211, 79, 0.05) 12px, rgba(255, 211, 79, 0.05) 24px),
+        repeating-linear-gradient(90deg, transparent 0, transparent 12px, rgba(255, 211, 79, 0.05) 12px, rgba(255, 211, 79, 0.05) 24px),
+        var(--c0);
+      color: var(--text);
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      font-size: 14px;
+      image-rendering: pixelated;
+      letter-spacing: 0.02em;
+    }
 
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background:
-          linear-gradient(90deg, transparent 31px, var(--line) 32px),
-          linear-gradient(transparent 31px, var(--line) 32px);
-        background-size: 64px 64px;
-        opacity: 0.35;
-        z-index: 0;
-      }
+    @font-face {
+      font-family: 'Press Start 2P';
+      src: local('Press Start 2P'), url('https://fonts.gstatic.com/s/pressstart2p/v15/e3t4euO8T-267oIAQAu6jDQyK3nq1w.woff2') format('woff2');
+      font-display: swap;
+    }
 
-      body::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        background: repeating-linear-gradient(
-          0deg,
-          rgba(255, 255, 255, 0.04),
-          rgba(255, 255, 255, 0.04) 1px,
-          rgba(0, 0, 0, 0.06) 1px,
-          rgba(0, 0, 0, 0.06) 2px
-        );
-        opacity: 0.22;
-        mix-blend-mode: screen;
-        z-index: 1;
-        animation: scan 12s linear infinite;
-      }
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(transparent 90%, rgba(255, 211, 79, 0.07)), repeating-linear-gradient(0deg, rgba(0,0,0,0.14) 0, rgba(0,0,0,0.14) 2px, transparent 2px, transparent 4px);
+      mix-blend-mode: screen;
+      opacity: 0.6;
+      z-index: 2;
+    }
 
-      @keyframes scan {
-        0% { transform: translateY(-10px); }
-        100% { transform: translateY(10px); }
-      }
+    .desktop {
+      position: relative;
+      padding: 32px 18px 48px;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
 
-      .status-bar {
-        position: sticky;
-        top: 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 18px;
-        background: linear-gradient(90deg, rgba(14, 25, 40, 0.92), rgba(7, 12, 22, 0.94));
-        box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-        border-bottom: 1px solid rgba(104, 214, 255, 0.24);
-        backdrop-filter: blur(8px);
-        z-index: 4;
-      }
+    .title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, var(--c3), var(--c1));
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,0.4), 0 6px 0 var(--c1);
+      text-transform: uppercase;
+    }
 
-      .brand {
-        display: inline-flex;
-        gap: 10px;
-        align-items: center;
-        font-family: 'Press Start 2P', 'Space Grotesk', monospace;
-        font-size: 12px;
-        text-shadow: 0 0 8px rgba(104, 214, 255, 0.4);
-      }
+    .lamp {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--frame);
+      border-radius: 50%;
+      background: var(--c7);
+      box-shadow: 0 0 6px var(--c7);
+    }
 
-      .pill {
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: rgba(104, 214, 255, 0.08);
-        border: 1px solid rgba(104, 214, 255, 0.3);
-        color: var(--accent-2);
-        font-size: 12px;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
+    .clock {
+      background: var(--c1);
+      padding: 6px 10px;
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      color: var(--c7);
+      text-shadow: 1px 1px 0 var(--c4);
+    }
 
-      .status { color: var(--muted); font-size: 14px; }
+    .dock {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin: 18px 0 12px;
+    }
 
-      .desktop {
-        position: relative;
-        z-index: 2;
-        padding: 38px 18px 64px;
-        max-width: 1100px;
-        margin: 0 auto;
-      }
+    .icon-card {
+      background: var(--panel);
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: 0 6px 0 var(--c1);
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      gap: 10px;
+    }
 
-      .workspace {
-        background: linear-gradient(145deg, rgba(10, 19, 33, 0.95), rgba(5, 11, 19, 0.95));
-        border: 1px solid rgba(94, 247, 179, 0.24);
-        box-shadow: var(--shadow);
-        border-radius: 18px;
-        overflow: hidden;
-      }
+    .icon-card h3 {
+      margin: 0 0 6px;
+      font-size: 14px;
+      color: var(--c7);
+    }
 
-      .window-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
-        background: linear-gradient(90deg, rgba(94, 247, 179, 0.08), rgba(104, 214, 255, 0.06));
-        border-bottom: 1px solid rgba(94, 247, 179, 0.24);
-        font-family: 'Press Start 2P', monospace;
-        font-size: 10px;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--text);
-      }
+    .icon-card p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
 
-      .leds { display: flex; gap: 6px; }
-      .led {
-        width: 10px; height: 10px; border-radius: 2px;
-        background: var(--accent);
-        box-shadow: 0 0 10px rgba(94, 247, 179, 0.8);
-      }
+    .window {
+      margin-top: 18px;
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 6px 0 var(--c1);
+    }
 
-      .window-title { flex: 1; letter-spacing: 0.08em; }
+    .window-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--frame);
+      background: linear-gradient(90deg, var(--c4), var(--c3));
+    }
 
-      .window-body { padding: 26px 22px 30px; display: grid; gap: 22px; }
+    .window-body {
+      padding: 16px 12px 18px;
+    }
 
-      h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); letter-spacing: 0.02em; }
-      .lead { margin: 0; color: var(--muted); max-width: 780px; line-height: 1.6; }
+    .menu {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
-      .pixel-btn {
-        position: relative;
-        padding: 12px 18px;
-        border: 2px solid var(--accent);
-        background: linear-gradient(180deg, rgba(94, 247, 179, 0.18), rgba(94, 247, 179, 0.05));
-        color: var(--text);
-        font-family: 'Press Start 2P', monospace;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        cursor: pointer;
-        transition: transform 120ms ease, box-shadow 120ms ease;
-        box-shadow: 0 0 0 2px rgba(94, 247, 179, 0.18), 0 10px 24px rgba(0,0,0,0.45);
-      }
-      .pixel-btn:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px rgba(104,214,255,0.2), 0 14px 30px rgba(0,0,0,0.55); }
-      .pixel-btn:active { transform: translateY(0); }
+    .menu button {
+      background: var(--c3);
+      color: var(--text);
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      padding: 6px 10px;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--c1);
+    }
 
-      .grid-launchers {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 18px;
-      }
+    .menu button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 var(--c1);
+    }
 
-      .card {
-        background: linear-gradient(160deg, rgba(8, 14, 24, 0.9), rgba(10, 18, 30, 0.9));
-        border: 1px solid rgba(104, 214, 255, 0.24);
-        border-radius: 14px;
-        padding: 16px;
-        box-shadow: var(--shadow);
-        position: relative;
-        overflow: hidden;
-      }
+    .columns {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
 
-      .card::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at 20% 20%, rgba(94, 247, 179, 0.07), transparent 30%);
-        pointer-events: none;
-      }
+    .list {
+      border: 2px solid var(--frame);
+      padding: 10px;
+      border-radius: var(--radius);
+      background: var(--c1);
+    }
 
-      .card h3 { margin: 0 0 10px; font-size: 18px; letter-spacing: 0.02em; }
-      .card p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .list h4 {
+      margin: 0 0 6px;
+      color: var(--c7);
+      text-transform: uppercase;
+      font-size: 12px;
+    }
 
-      .tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 8px;
-        border: 1px solid rgba(94, 247, 179, 0.3);
-        border-radius: 8px;
-        font-size: 12px;
-        color: var(--accent);
-        background: rgba(94, 247, 179, 0.08);
-      }
+    .list ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 6px;
+    }
 
-      .console {
-        background: #07111f;
-        border: 1px solid rgba(104, 214, 255, 0.24);
-        border-radius: 14px;
-        padding: 16px;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 12px;
-        color: var(--accent-2);
-        box-shadow: var(--shadow);
-      }
+    .list li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
 
-      code { color: var(--accent); font-family: 'Press Start 2P', monospace; font-size: 11px; }
+    .status {
+      margin-top: 12px;
+      padding: 10px;
+      border: 2px solid var(--frame);
+      border-radius: var(--radius);
+      background: var(--c1);
+      color: var(--c7);
+      font-size: 12px;
+      display: grid;
+      gap: 6px;
+    }
 
-      .columns { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; align-items: start; }
+    .pixel-icon {
+      position: relative;
+      width: var(--pixel);
+      height: var(--pixel);
+      transform: scale(3);
+      transform-origin: top left;
+      image-rendering: pixelated;
+      margin: 6px;
+    }
 
-      .hint { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .pixel-icon::before {
+      content: '';
+      display: block;
+      width: var(--pixel);
+      height: var(--pixel);
+      box-shadow: 0 0 0 0 var(--c7);
+    }
 
-      footer { margin-top: 26px; text-align: center; color: var(--muted); font-size: 14px; }
+    .icon-disk::before {
+      box-shadow:
+        0 0 0 0 var(--c0),
+        var(--pixel) 0 0 0 var(--c5),
+        calc(var(--pixel)*2) 0 0 0 var(--c5),
+        calc(var(--pixel)*3) 0 0 0 var(--c5),
+        calc(var(--pixel)*4) 0 0 0 var(--c5),
+        0 var(--pixel) 0 0 var(--c5),
+        var(--pixel) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*2) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*3) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*4) var(--pixel) 0 0 var(--c5),
+        0 calc(var(--pixel)*2) 0 0 var(--c5),
+        var(--pixel) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*2) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*3) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*4) calc(var(--pixel)*2) 0 0 var(--c5),
+        0 calc(var(--pixel)*3) 0 0 var(--c6),
+        var(--pixel) calc(var(--pixel)*3) 0 0 var(--c6),
+        calc(var(--pixel)*2) calc(var(--pixel)*3) 0 0 var(--c6),
+        calc(var(--pixel)*3) calc(var(--pixel)*3) 0 0 var(--c6),
+        calc(var(--pixel)*4) calc(var(--pixel)*3) 0 0 var(--c6),
+        0 calc(var(--pixel)*4) 0 0 var(--c6),
+        var(--pixel) calc(var(--pixel)*4) 0 0 var(--c7),
+        calc(var(--pixel)*2) calc(var(--pixel)*4) 0 0 var(--c7),
+        calc(var(--pixel)*3) calc(var(--pixel)*4) 0 0 var(--c7),
+        calc(var(--pixel)*4) calc(var(--pixel)*4) 0 0 var(--c6);
+    }
 
-      a { color: var(--accent-2); text-decoration: none; }
-      a:hover { text-decoration: underline; }
+    .icon-monitor::before {
+      box-shadow:
+        0 0 0 0 var(--c0),
+        var(--pixel) 0 0 0 var(--c0),
+        calc(var(--pixel)*2) 0 0 0 var(--c0),
+        calc(var(--pixel)*3) 0 0 0 var(--c0),
+        calc(var(--pixel)*4) 0 0 0 var(--c0),
+        0 var(--pixel) 0 0 var(--c5),
+        var(--pixel) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*2) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*3) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*4) var(--pixel) 0 0 var(--c5),
+        0 calc(var(--pixel)*2) 0 0 var(--c5),
+        var(--pixel) calc(var(--pixel)*2) 0 0 var(--c3),
+        calc(var(--pixel)*2) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*3) calc(var(--pixel)*2) 0 0 var(--c3),
+        calc(var(--pixel)*4) calc(var(--pixel)*2) 0 0 var(--c5),
+        var(--pixel) calc(var(--pixel)*3) 0 0 var(--c5),
+        calc(var(--pixel)*2) calc(var(--pixel)*3) 0 0 var(--c5),
+        calc(var(--pixel)*3) calc(var(--pixel)*3) 0 0 var(--c5),
+        var(--pixel) calc(var(--pixel)*4) 0 0 var(--c6),
+        calc(var(--pixel)*3) calc(var(--pixel)*4) 0 0 var(--c6);
+    }
 
-      @media (max-width: 900px) {
-        .columns { grid-template-columns: 1fr; }
-        .status-bar { flex-direction: column; gap: 8px; align-items: flex-start; }
-      }
+    .icon-folder::before {
+      box-shadow:
+        0 0 0 0 var(--c5),
+        var(--pixel) 0 0 0 var(--c6),
+        calc(var(--pixel)*2) 0 0 0 var(--c6),
+        calc(var(--pixel)*3) 0 0 0 var(--c6),
+        calc(var(--pixel)*4) 0 0 0 var(--c5),
+        0 var(--pixel) 0 0 var(--c5),
+        var(--pixel) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*2) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*3) var(--pixel) 0 0 var(--c7),
+        calc(var(--pixel)*4) var(--pixel) 0 0 var(--c5),
+        0 calc(var(--pixel)*2) 0 0 var(--c5),
+        var(--pixel) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*2) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*3) calc(var(--pixel)*2) 0 0 var(--c7),
+        calc(var(--pixel)*4) calc(var(--pixel)*2) 0 0 var(--c5),
+        0 calc(var(--pixel)*3) 0 0 var(--c4),
+        var(--pixel) calc(var(--pixel)*3) 0 0 var(--c4),
+        calc(var(--pixel)*2) calc(var(--pixel)*3) 0 0 var(--c4),
+        calc(var(--pixel)*3) calc(var(--pixel)*3) 0 0 var(--c4),
+        calc(var(--pixel)*4) calc(var(--pixel)*3) 0 0 var(--c4),
+        0 calc(var(--pixel)*4) 0 0 var(--c4),
+        var(--pixel) calc(var(--pixel)*4) 0 0 var(--c6),
+        calc(var(--pixel)*2) calc(var(--pixel)*4) 0 0 var(--c6),
+        calc(var(--pixel)*3) calc(var(--pixel)*4) 0 0 var(--c6),
+        calc(var(--pixel)*4) calc(var(--pixel)*4) 0 0 var(--c4);
+    }
 
-      @media (max-width: 620px) {
-        .window-body { padding: 20px; }
-        h1 { font-size: 26px; }
-        .brand { font-size: 10px; }
-      }
-    </style>
-  </head>
-  <body>
-    <header class="status-bar">
-      <div class="brand">PIXEL DESK • 3D</div>
-      <div class="status">
-        <span class="pill">Workbench Idle</span>
-        <span aria-live="polite">• <span id="clock">--:--</span></span>
+    footer {
+      margin-top: 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 720px) {
+      .columns { grid-template-columns: 1fr; }
+      .dock { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+      body { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-overlay" aria-hidden="true"></div>
+  <div class="desktop">
+    <header class="title-bar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="lamp" aria-hidden="true"></div>
+        GOLDEN PIXEL OS
       </div>
+      <div class="clock" aria-live="polite" id="clock">--:--:--</div>
     </header>
 
-    <main class="desktop">
-      <section class="workspace" aria-label="3D Workbench">
-        <div class="window-header">
-          <div class="leds" aria-hidden="true"><span class="led"></span><span class="led" style="opacity:0.6"></span></div>
-          <div class="window-title">Neo Workbench · Rev 1.0</div>
-          <div class="pill">Ready</div>
+    <section class="dock" aria-label="System shortcuts">
+      <article class="icon-card">
+        <div class="pixel-icon icon-disk" aria-hidden="true"></div>
+        <div>
+          <h3>Disk Desk</h3>
+          <p>Mount virtual drives, list sectors, and load boot entries.</p>
         </div>
-        <div class="window-body">
-          <div class="columns">
-            <div>
-              <h1>Advanced 3D Objects & Animations</h1>
-              <p class="lead">A clean, retro-futuristic desktop for building intricate 3D worlds. Launch modules, preview motion systems, and keep everything organized without the clutter.</p>
-              <div class="actions">
-                <button class="pixel-btn" aria-label="Start a fresh scene">Start New Scene</button>
-                <button class="pixel-btn" aria-label="Load workspace">Load Workspace</button>
-                <button class="pixel-btn" aria-label="Open quick tour">Quick Tour</button>
-              </div>
-              <p class="hint">Tip: drag modules between slots, toggle orthographic preview with <code>Shift+O</code>, and use the neon grid as your scale guide.</p>
-            </div>
-            <div class="console" aria-label="Command console">
-              > boot /systems/renderer --profile neon\_lab<br />
-              > link /devices/tablet --mode direct<br />
-              > run ./serve.sh --port 8000<br />
-              > log "workspace ready"<br />
-              <br />
-              Quickstart: <code>python3 -m http.server 8000</code><br />
-              Docs: <a href="README.md">README</a>
-            </div>
-          </div>
+      </article>
+      <article class="icon-card">
+        <div class="pixel-icon icon-monitor" aria-hidden="true"></div>
+        <div>
+          <h3>Workbench</h3>
+          <p>Launch the golden window manager with chunky pixels.</p>
+        </div>
+      </article>
+      <article class="icon-card">
+        <div class="pixel-icon icon-folder" aria-hidden="true"></div>
+        <div>
+          <h3>File Drawer</h3>
+          <p>Organize sprites, tunes, and BASIC scripts in 8 colours.</p>
+        </div>
+      </article>
+    </section>
 
-          <div class="grid-launchers" id="projects" aria-label="Project launchers">
-            <article class="card">
-              <div class="tag">Module</div>
-              <h3>Voxel Playground</h3>
-              <p>Block-based sculpting with depth cueing, palette cycling, and rapid mesh export.</p>
-            </article>
-            <article class="card">
-              <div class="tag">Scene</div>
-              <h3>Procedural Horizon</h3>
-              <p>Noise-driven terrains with orbit camera presets and neon-atmosphere shaders.</p>
-            </article>
-            <article class="card">
-              <div class="tag">Route</div>
-              <h3>Camera Rail Runner</h3>
-              <p>Design multi-track flythroughs with easing curves and parallax markers.</p>
-            </article>
+    <section class="window" aria-label="Golden desktop window">
+      <div class="window-header">
+        <div>GEOS / XL / XE COMPATIBLE</div>
+        <div class="menu">
+          <button type="button">File</button>
+          <button type="button">Desk</button>
+          <button type="button">Tools</button>
+        </div>
+      </div>
+      <div class="window-body">
+        <div class="columns">
+          <div class="list" aria-label="Directory listing">
+            <h4>Disks &amp; Apps</h4>
+            <ul>
+              <li><span class="pixel-icon icon-disk" aria-hidden="true"></span>GEOS.SYSTEM</li>
+              <li><span class="pixel-icon icon-folder" aria-hidden="true"></span>DESKTOP.DIR</li>
+              <li><span class="pixel-icon icon-monitor" aria-hidden="true"></span>PAINT64.APP</li>
+              <li><span class="pixel-icon icon-monitor" aria-hidden="true"></span>MUSIC.TRK</li>
+            </ul>
+          </div>
+          <div class="status" aria-label="Status log">
+            <div>READY.</div>
+            <div>8×8 GLYPH MODE ENABLED.</div>
+            <div>PALETTE: GOLDEN OCTET ACTIVE.</div>
+            <div>CURSOR BLINK: _</div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <footer>
-        Crafted for high-level 3D experimentation • <span id="date">--</span>
-      </footer>
-    </main>
+    <footer>
+      Commodore 64 &amp; Atari XL/XE flavour • Golden eight-tone desktop revived.
+    </footer>
+  </div>
 
-    <script>
-      const clock = document.getElementById('clock');
-      const date = document.getElementById('date');
-      function updateTime() {
-        const now = new Date();
-        const options = { hour: '2-digit', minute: '2-digit' };
-        clock.textContent = now.toLocaleTimeString([], options);
-        date.textContent = now.toLocaleString();
-      }
-      updateTime();
-      setInterval(updateTime, 1000);
-    </script>
-  </body>
+  <script>
+    function tick() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  </script>
+</body>
 </html>
