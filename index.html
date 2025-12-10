@@ -26,6 +26,9 @@
   .glyph{width:40px;height:34px;margin:0 auto;border:1px solid #000;box-shadow:2px 2px 0 #000;background:#eef2f0;display:flex;align-items:center;justify-content:center}
   .label{margin-top:2px;border:1px solid #000;background:#f0f6ff;padding:1px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .icon.selected .label{background:#aecdff}
+  .embed-wrap{display:flex;flex-direction:column;gap:6px;height:100%}
+  .embed-frame{border:1px solid #000;box-shadow:2px 2px 0 #000;width:100%;height:100%;background:#000}
+  .embed-bar{display:flex;align-items:center;gap:8px;font-weight:bold}
 
   .dock{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;padding:3px 4px;background:#eef2f0;border:1px solid #000;box-shadow:2px 2px 0 #000}
   .dock .task{padding:2px 5px;border:1px solid #000;background:#fff;cursor:default}
@@ -128,6 +131,9 @@
     <div class="icon" style="left:12px;top:266px" data-launch="canvas">
       <div class="glyph" data-svg="canvas"></div><div class="label">Canvas</div>
     </div>
+    <div class="icon" style="left:12px;top:350px" data-launch="newsroom">
+      <div class="glyph" data-svg="newsroom"></div><div class="label">Newsroom 3D</div>
+    </div>
     <div class="dock" id="dock" aria-label="Minimised Windows Dock"></div>
   </div>
 </div>
@@ -190,6 +196,13 @@
       <path d="M10 24c5-6 10-3 16-8 3-3 6-4 10-1" stroke="#6a6a6a" fill="none"/>
       <path d="M35 29l6-5" stroke="#000" />
       <path d="M41 24l-8 6 3-9 7 3z" fill="#f2c38a" stroke="#000"/>
+    </svg>`,
+    newsroom:`<svg viewBox="0 0 48 36" width="36" height="28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="2" y="6" width="44" height="26" rx="2" fill="#0b1426" stroke="#000"/>
+      <rect x="4" y="8" width="40" height="18" rx="1" fill="#111c34" stroke="#000"/>
+      <path d="M6 22h8l4-6 6 8 4-5h10" stroke="#00e5ff" stroke-width="2" fill="none"/>
+      <rect x="14" y="27" width="20" height="3" rx="1" fill="#ffd54a" stroke="#000"/>
+      <circle cx="10" cy="12" r="2" fill="#ffd54a" stroke="#000"/>
     </svg>`
   };
   $$('[data-svg]').forEach(g=>g.innerHTML=ICONS[g.dataset.svg]||'');
@@ -473,15 +486,35 @@
     WM.createWindow({title:'Canvas Editor — '+file.name,width:720,height:500,left:90,top:70,content:wrap,appId:'canvas'});
   }
 
+  // Newsroom 3D embed
+  function openNewsroom(){
+    const wrap=document.createElement('div'); wrap.className='embed-wrap';
+    const bar=document.createElement('div'); bar.className='embed-bar';
+    bar.innerHTML='<span>MM Newsroom Studio · v0.0.32</span><button data-act="new-tab">Open in new tab</button>';
+    const frame=document.createElement('iframe');
+    frame.className='embed-frame';
+    frame.src='newsroom-v_0_0_32.html';
+    frame.title='MM Newsroom Studio';
+    wrap.appendChild(bar); wrap.appendChild(frame);
+    bar.addEventListener('click',(e)=>{ if(e.target?.dataset?.act==='new-tab'){ window.open('newsroom-v_0_0_32.html','_blank'); } });
+    WM.createWindow({title:'Newsroom Studio 3D',width:980,height:640,left:180,top:60,content:wrap,appId:'newsroom'});
+  }
+
   /* ---------- Desktop interactions ---------- */
-  function launch(id){ if(id==='files') openFiles(); if(id==='note') openNote(); if(id==='calc') openCalc(); if(id==='canvas') openCanvas(); }
+  function launch(id){
+    if(id==='files') openFiles();
+    if(id==='note') openNote();
+    if(id==='calc') openCalc();
+    if(id==='canvas') openCanvas();
+    if(id==='newsroom') openNewsroom();
+  }
   let sel=null;
   desktop.addEventListener('click',(e)=>{
     if(skipNextIconClick){ skipNextIconClick=false; return; }
     const icon=e.target.closest('.icon'); if(sel) sel.classList.remove('selected'); if(icon){ sel=icon; sel.classList.add('selected'); }
+    if(icon && !skipNextIconClick){ launch(icon.dataset.launch); }
   });
-  if(isTouch){ desktop.addEventListener('click',(e)=>{ const ico=e.target.closest('.icon'); if(ico) launch(ico.dataset.launch); }); }
-  else{ desktop.addEventListener('dblclick',(e)=>{ const ico=e.target.closest('.icon'); if(ico) launch(ico.dataset.launch); }); }
+  if(!isTouch){ desktop.addEventListener('dblclick',(e)=>{ const ico=e.target.closest('.icon'); if(ico) launch(ico.dataset.launch); }); }
 
   function enableIconDrag(){
     desktop.querySelectorAll('.icon').forEach(icon=>{

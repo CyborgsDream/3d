@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+================================================================================
+@project : METRIX MEDIA — NEWSROOM STUDIO
+@version : v0.0.32 — Mobile-First Responsive • Low-Poly Vector-Poster Stage
+@date    : 2025-11-19 (Europe/Warsaw)
+@blurb   : • Smart mobile/desktop layout (no overlaps, stacked panels on phones)
+           • Dark mode default, low-poly TV-news stage on 2D canvas
+           • 15-minute timeline with CUE markers + simple script runner
+           • Tabs for Timeline/Script · Scene Info · Script Editor
+================================================================================
+-->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MM Newsroom Studio v0.0.32</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --bg-main: #040712;
+      --bg-panel: #080b18;
+      --bg-panel-soft: #0b0f1f;
+      --bg-chip: #14192a;
+      --bg-chip-soft: #101423;
+      --border-soft: rgba(255, 255, 255, 0.06);
+      --border-strong: rgba(255, 255, 255, 0.12);
+      --accent: #ffd54a;
+      --accent-soft: #ffb74d;
+      --accent-2: #00e5ff;
+      --text-main: #e8edf9;
+      --text-soft: #a7b2d6;
+      --text-muted: #6f7893;
+      --danger: #ff5252;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 8px;
+      --shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.6);
+      --stage-grad-top: #061428;
+      --stage-grad-mid: #062a45;
+      --stage-grad-bottom: #020814;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle at top, #101526 0, #040712 38%, #02030b 100%);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ===== HEADER ===== */
+
+    header {
+      padding: 10px 12px 6px;
+      border-bottom: 1px solid var(--border-soft);
+      background: linear-gradient(to right, #070a15 0, #080d1b 40%, #050713 100%);
+    }
+
+    .headline-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 6px 18px;
+    }
+
+    .headline-title {
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .headline-meta {
+      font-size: 11px;
+      color: var(--text-soft);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .pills-row {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: radial-gradient(circle at top, #161c30 0, #0d1222 60%, #080c16 100%);
+      color: var(--text-soft);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill span.key {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .pill.primary {
+      border-color: rgba(255, 213, 74, 0.6);
+      box-shadow: 0 0 0 1px rgba(255, 213, 74, 0.24);
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel-feeds {
+      width: 320px;
+      max-width: 40%;
+      border-right: 1px solid var(--border-soft);
+      background: linear-gradient(to bottom, #060813 0, #050814 40%, #050713 100%);
+      display: flex;
+      flex-direction: column;
+      min-width: 260px;
+    }
+
+    .feeds-header {
+      padding: 8px 12px;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #f1c75b;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .feeds-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0 8px;
+    }
+
+    .feed-item {
+      padding: 8px 14px 9px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    .feed-item:hover {
+      background: rgba(10, 14, 30, 0.9);
+      border-color: rgba(255, 213, 74, 0.18);
+    }
+
+    .feed-title {
+      font-size: 13px;
+    }
+
+    .feed-meta {
+      margin-top: 2px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .panel-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: radial-gradient(circle at top left, #151b32 0, #050713 55%, #02030a 100%);
+      padding: 8px 10px 6px;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    /* ===== STAGE CARD ===== */
+
+    .stage-card {
+      background: radial-gradient(circle at top, #101b36 0, #060b18 50%, #050712 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-soft);
+      padding: 8px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .stage-header-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stage-title-pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #00c6ff 0, #00e676 40%, #ffd54a 100%);
+      color: #020308;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 30px rgba(0, 230, 118, 0.45);
+      white-space: nowrap;
+    }
+
+    .fps-pill {
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      font-size: 10px;
+      color: var(--text-soft);
+    }
+
+    .stage-canvas-wrap {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: radial-gradient(circle at top, var(--stage-grad-top) 0, var(--stage-grad-mid) 45%, var(--stage-grad-bottom) 100%);
+      min-height: 0;
+    }
+
+    /* 16:9 aspect ratio while allowing flex to size it */
+    .stage-aspect {
+      width: 100%;
+      padding-top: 56.25%;
+      position: relative;
+    }
+
+    #stageCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .anchor-bar {
+      margin-top: 4px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #0d111f 0, #10162a 50%, #141d33 100%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .anchor-tag {
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 213, 74, 0.7);
+      background: radial-gradient(circle at top, #181f3b 0, #11182f 100%);
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .anchor-desc {
+      color: var(--text-soft);
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .cam-buttons {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .cam-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(0, 229, 255, 0.4);
+      padding: 3px 9px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      background: radial-gradient(circle at top, #12263d 0, #0c1424 100%);
+      color: var(--text-soft);
+      cursor: pointer;
+    }
+
+    .cam-btn.active {
+      background: linear-gradient(90deg, #00e5ff 0, #00ff95 100%);
+      color: #020308;
+      border-color: rgba(0, 0, 0, 0.8);
+      font-weight: 700;
+    }
+
+    /* ===== TABS & CONTENT ===== */
+
+    .tabs-row {
+      margin-top: 4px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      flex: 1;
+      min-width: 110px;
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--bg-chip);
+      color: var(--text-soft);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(90deg, #ffd54a 0, #ffa726 100%);
+      color: #050308;
+      border-color: rgba(0, 0, 0, 0.9);
+      font-weight: 800;
+    }
+
+    .tabs-content {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .tab-panel {
+      display: none;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-soft);
+      background: radial-gradient(circle at top left, #121831 0, #070b17 50%, #050713 100%);
+      padding: 8px 10px;
+      min-height: 0;
+    }
+
+    .tab-panel.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Timeline panel */
+
+    .timeline-top-row {
+      font-size: 11px;
+      color: var(--text-soft);
+      margin-bottom: 4px;
+    }
+
+    .timeline-canvas-wrap {
+      border-radius: 10px;
+      background: radial-gradient(circle at top, #0b1326 0, #050713 70%);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 6px;
+      min-height: 0;
+    }
+
+    #timelineCanvas {
+      width: 100%;
+      height: 90px;
+      display: block;
+    }
+
+    .timeline-legend {
+      margin-top: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Scene Info */
+
+    .scene-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .scene-chip {
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      background: rgba(7, 13, 30, 0.95);
+      border: 1px solid var(--border-soft);
+    }
+
+    .scene-chip strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    /* Script panel */
+
+    .script-text {
+      flex: 1;
+      min-height: 0;
+    }
+
+    #scriptArea {
+      width: 100%;
+      height: 140px;
+      resize: none;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: #050814;
+      color: var(--text-main);
+      padding: 8px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .script-controls {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .script-btn {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-chip-soft);
+      color: var(--text-soft);
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .script-btn.primary {
+      background: linear-gradient(90deg, #00e5ff 0, #00ff95 100%);
+      border-color: rgba(0, 0, 0, 0.85);
+      color: #020308;
+      font-weight: 700;
+    }
+
+    .script-btn.danger {
+      background: linear-gradient(90deg, #ff5252 0, #ff8a65 100%);
+      color: #020308;
+      border-color: rgba(0, 0, 0, 0.85);
+      font-weight: 700;
+    }
+
+    /* ===== FOOTER ===== */
+
+    footer {
+      padding: 4px 10px 6px;
+      font-size: 10px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-soft);
+      background: radial-gradient(circle at top, #11172a 0, #050713 60%);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    footer span strong {
+      color: var(--accent-soft);
+    }
+
+    /* ===== MOBILE LAYOUT ===== */
+
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+
+      .panel-feeds {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        max-height: 210px;
+      }
+
+      .feeds-list {
+        max-height: 164px;
+      }
+
+      .panel-main {
+        padding: 8px 8px 6px;
+      }
+
+      .stage-card {
+        padding: 8px 8px 10px;
+      }
+
+      .stage-title-pill {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+      }
+
+      .stage-header-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .anchor-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .tabs-row {
+        margin-top: 6px;
+      }
+
+      #timelineCanvas {
+        height: 80px;
+      }
+
+      #scriptArea {
+        height: 180px;
+      }
+
+      header {
+        padding: 8px 10px 6px;
+      }
+
+      .headline-row {
+        gap: 4px 10px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .panel-feeds {
+        max-height: 190px;
+      }
+
+      #timelineCanvas {
+        height: 72px;
+      }
+
+      #scriptArea {
+        height: 160px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="headline-row">
+        <div class="headline-title">METRIX MEDIA — NEWSROOM STUDIO</div>
+        <div class="headline-meta">V0.0.32 · LOW-POLY · VECTOR-POSTER</div>
+      </div>
+      <div class="pills-row">
+        <div class="pill primary"><span class="key">MODE</span> DARK · 3D STAGE</div>
+        <div class="pill"><span class="key">TIMELINE</span> SCRIPT · 0–15 MIN</div>
+      </div>
+    </header>
+
+    <main>
+      <!-- SOURCES / FEEDS -->
+      <section class="panel-feeds">
+        <div class="feeds-header">SOURCES · FEEDS</div>
+        <div class="feeds-list" id="feedsList">
+          <div class="feed-item">
+            <div class="feed-title">Kraków · Transport map update</div>
+            <div class="feed-meta">now · city</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">T-47 biomech log synced</div>
+            <div class="feed-meta">2m · fitness</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">Comic: Paradyzja — page layout</div>
+            <div class="feed-meta">8m · comic</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">AI persona: Atlas v1.0 updated</div>
+            <div class="feed-meta">12m · ai</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">Studio: HTML5 single-file exporter</div>
+            <div class="feed-meta">1h · dev</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">Wykop post scheduled</div>
+            <div class="feed-meta">1h · social</div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-title">Synth track: retro disco 98 bpm</div>
+            <div class="feed-meta">2h · audio</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MAIN: STAGE + TABS -->
+      <section class="panel-main">
+        <div class="stage-card">
+          <div class="stage-header-row">
+            <div class="stage-title-pill">KRAKÓW · LIVE CITY BULLETIN</div>
+            <div class="fps-pill">fps: <span id="fpsValue">--</span></div>
+          </div>
+
+          <div class="stage-canvas-wrap">
+            <div class="stage-aspect">
+              <canvas id="stageCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="anchor-bar">
+            <div class="anchor-tag">ANCHOR · K-47</div>
+            <div class="anchor-desc" id="anchorDesc">
+              Evening bulletin loaded with Metrix-grade updates.
+            </div>
+            <div class="cam-buttons">
+              <button class="cam-btn active" data-cam="wide">Cam · Wide</button>
+              <button class="cam-btn" data-cam="left">Cam · Left</button>
+              <button class="cam-btn" data-cam="right">Cam · Right</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabs-row">
+          <button class="tab-btn active" data-tab="timeline">Timeline · Script</button>
+          <button class="tab-btn" data-tab="scene">Scene Info</button>
+          <button class="tab-btn" data-tab="script">Script Editor</button>
+        </div>
+
+        <div class="tabs-content">
+          <!-- Timeline panel -->
+          <div class="tab-panel active" id="tab-timeline">
+            <div class="timeline-top-row">
+              Timeline: 00:00 / 15:00 · Tap track to jump · CUE events are coloured markers.
+            </div>
+            <div class="timeline-canvas-wrap">
+              <canvas id="timelineCanvas"></canvas>
+            </div>
+            <div class="timeline-legend" id="timelineLegend">
+              ACT 1 · Studio intro, anchor greeting, lower-third titles.  
+              Script runner highlights current time with a white marker.
+            </div>
+          </div>
+
+          <!-- Scene info -->
+          <div class="tab-panel" id="tab-scene">
+            <div class="scene-grid">
+              <div class="scene-chip">
+                <strong>Stage</strong>
+                Kraków · Live city bulletin set, low-poly vector-poster style with dual presenters and abstract city skyline.
+              </div>
+              <div class="scene-chip">
+                <strong>Cameras</strong>
+                Three virtual angles: WIDE (desk + skyline), LEFT (female anchor focus), RIGHT (male anchor focus).
+              </div>
+              <div class="scene-chip">
+                <strong>Graphics</strong>
+                T-47 ticker, breaking-news banner, soft motion in background polygons, subtle parallax drift.
+              </div>
+              <div class="scene-chip">
+                <strong>Mood</strong>
+                Calm but high-tech; evening colours, teal-and-amber highlights, triangle-based shading.
+              </div>
+            </div>
+          </div>
+
+          <!-- Script editor -->
+          <div class="tab-panel" id="tab-script">
+            <div class="script-text">
+              <textarea id="scriptArea" spellcheck="false"></textarea>
+            </div>
+            <div class="script-controls">
+              <button class="script-btn primary" id="btnPlay">Play Script</button>
+              <button class="script-btn danger" id="btnStop">Stop</button>
+              <button class="script-btn" id="btnReset">Reset</button>
+              <button class="script-btn" id="btnDemo">Load Demo Script</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>MM Newsroom Studio <strong>v0.0.32</strong> · Ready.</span>
+      <span>Scene: <strong id="sceneObjectCount">0</strong> objects · Timeline engine online.</span>
+    </footer>
+  </div>
+
+  <script>
+    // ========== GLOBALS ==========
+    const stageCanvas = document.getElementById("stageCanvas");
+    const timelineCanvas = document.getElementById("timelineCanvas");
+    const fpsSpan = document.getElementById("fpsValue");
+    const anchorDesc = document.getElementById("anchorDesc");
+    const sceneObjectCountSpan = document.getElementById("sceneObjectCount");
+
+    let stageCtx, timelineCtx;
+    let lastFrameTime = performance.now();
+    let frameCounter = 0;
+    let fpsAccumTime = 0;
+    let scriptPlaying = false;
+    let scriptStartTime = 0;
+    let scriptOffset = 0;
+    const TIMELINE_DURATION = 15 * 60; // 15 minutes in seconds
+    let cues = [];
+
+    // Simple representation of scene "objects" for stats
+    let sceneObjects = 0;
+
+    // ========== LAYOUT HELPERS ==========
+
+    function resizeStageCanvas() {
+      const rect = stageCanvas.getBoundingClientRect();
+      stageCanvas.width = rect.width * window.devicePixelRatio;
+      stageCanvas.height = rect.height * window.devicePixelRatio;
+      stageCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      drawStage(currentCam);
+    }
+
+    function resizeTimelineCanvas() {
+      const rect = timelineCanvas.getBoundingClientRect();
+      timelineCanvas.width = rect.width * window.devicePixelRatio;
+      timelineCanvas.height = rect.height * window.devicePixelRatio;
+      timelineCtx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+      drawTimeline(getCurrentTimelineTime());
+    }
+
+    window.addEventListener("resize", () => {
+      resizeStageCanvas();
+      resizeTimelineCanvas();
+    });
+
+    // ========== STAGE RENDERING (2D LOW-POLY) ==========
+
+    let currentCam = "wide";
+
+    function drawPolygon(ctx, points, fill, stroke, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i][0], points[i][1]);
+      }
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawLowPolyBackground(ctx, w, h) {
+      const cols = 14;
+      const rows = 8;
+      const cellW = w / cols;
+      const cellH = h / rows;
+      const palette = [
+        "#0a1d3a",
+        "#0d2748",
+        "#153155",
+        "#1a3b66",
+        "#204777",
+        "#275880",
+        "#2c6c88",
+        "#315f73",
+        "#1d3c5b",
+        "#143049"
+      ];
+
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const x0 = x * cellW;
+          const y0 = y * cellH;
+          const x1 = x0 + cellW;
+          const y1 = y0 + cellH;
+          const xm = (x0 + x1) / 2 + (Math.random() - 0.5) * cellW * 0.2;
+          const ym = (y0 + y1) / 2 + (Math.random() - 0.5) * cellH * 0.2;
+
+          const c1 = palette[(x + y * 3) % palette.length];
+          const c2 = palette[(x + y * 3 + 3) % palette.length];
+
+          drawPolygon(ctx, [[x0, y0], [xm, ym], [x1, y0]], c1, null, 0.9);
+          drawPolygon(ctx, [[x1, y0], [xm, ym], [x1, y1]], c2, null, 0.95);
+          drawPolygon(ctx, [[x1, y1], [xm, ym], [x0, y1]], c1, null, 0.9);
+          drawPolygon(ctx, [[x0, y1], [xm, ym], [x0, y0]], c2, null, 0.95);
+        }
+      }
+    }
+
+    function drawDesk(ctx, w, h) {
+      const deskY = h * 0.68;
+      const deskHeight = h * 0.12;
+      const deskWidth = w * 0.62;
+      const x0 = (w - deskWidth) / 2;
+      const x1 = x0 + deskWidth;
+      const y0 = deskY;
+      const y1 = deskY + deskHeight;
+
+      const deskTop = [
+        [x0, y0],
+        [x1, y0],
+        [x1 - w * 0.04, y0 - h * 0.05],
+        [x0 + w * 0.04, y0 - h * 0.05]
+      ];
+      const front = [
+        [x0 + w * 0.03, y0],
+        [x1 - w * 0.03, y0],
+        [x1 - w * 0.05, y1],
+        [x0 + w * 0.05, y1]
+      ];
+      drawPolygon(ctx, front, "#03111c", "#041b28");
+      drawPolygon(ctx, deskTop, "#0e2840", "#1d3c5b");
+
+      const logoW = deskWidth * 0.26;
+      const logoH = deskHeight * 0.35;
+      const lx0 = (w - logoW) / 2;
+      const ly0 = y0 + deskHeight * 0.15;
+      const lx1 = lx0 + logoW;
+      const ly1 = ly0 + logoH;
+      const grad = ctx.createLinearGradient(lx0, ly0, lx1, ly1);
+      grad.addColorStop(0, "#00e5ff");
+      grad.addColorStop(0.5, "#00ff95");
+      grad.addColorStop(1, "#ffd54a");
+      drawPolygon(ctx, [[lx0, ly0], [lx1, ly0], [lx1, ly1], [lx0, ly1]], grad, null, 0.92);
+    }
+
+    function drawPresenter(ctx, cx, baseY, scale, isFemale, emphasis) {
+      const bodyH = 120 * scale;
+      const legH = 80 * scale;
+      const totalH = bodyH + legH;
+      const topY = baseY - totalH;
+
+      const skinMain = emphasis ? "#ffcc80" : "#f5b26b";
+      const skinShade = emphasis ? "#f09b57" : "#e09555";
+      const dress = isFemale ? "#111218" : "#121623";
+      const hair = isFemale ? "#2c2327" : "#20232c";
+
+      // legs
+      const legWidth = 22 * scale;
+      const legGap = 12 * scale;
+      const lx0 = cx - legWidth - legGap / 2;
+      const rx0 = cx + legGap / 2;
+      const ly0 = baseY - legH;
+
+      drawPolygon(ctx, [[lx0, ly0], [lx0 + legWidth, ly0], [cx, baseY],
+        [cx - legWidth * 0.8, baseY]], skinShade, null, 0.98);
+      drawPolygon(ctx, [[rx0, ly0], [rx0 + legWidth, ly0], [cx + legWidth * 0.8, baseY],
+        [cx, baseY]], skinMain, null, 0.99);
+
+      // torso
+      const torsoW = 80 * scale;
+      const torsoH = 70 * scale;
+      const torsoY0 = ly0 - torsoH;
+      drawPolygon(ctx, [
+        [cx - torsoW * 0.55, torsoY0 + 8 * scale],
+        [cx + torsoW * 0.55, torsoY0 + 8 * scale],
+        [cx + torsoW * 0.4, torsoY0 + torsoH],
+        [cx - torsoW * 0.4, torsoY0 + torsoH]
+      ], dress, "#151725", 1);
+
+      // shoulders / neck
+      drawPolygon(ctx, [
+        [cx - torsoW * 0.3, torsoY0 + 8 * scale],
+        [cx + torsoW * 0.3, torsoY0 + 8 * scale],
+        [cx + torsoW * 0.15, torsoY0 - 6 * scale],
+        [cx - torsoW * 0.15, torsoY0 - 6 * scale]
+      ], skinShade, null, 0.98);
+
+      // head
+      const headH = 44 * scale;
+      const headW = 34 * scale;
+      const hy0 = torsoY0 - headH;
+      drawPolygon(ctx, [
+        [cx - headW / 2, hy0 + headH * 0.3],
+        [cx + headW / 2, hy0 + headH * 0.25],
+        [cx + headW * 0.55, hy0 + headH * 0.8],
+        [cx, hy0 + headH],
+        [cx - headW * 0.65, hy0 + headH * 0.8]
+      ], skinMain, "#d68a4e", 1);
+
+      // hair cap
+      drawPolygon(ctx, [
+        [cx - headW / 2 - 2 * scale, hy0 + headH * 0.3],
+        [cx + headW / 2 + 2 * scale, hy0 + headH * 0.24],
+        [cx + headW * 0.4, hy0 + headH * 0.05],
+        [cx, hy0],
+        [cx - headW * 0.55, hy0 + headH * 0.05]
+      ], hair, null, 1);
+
+      // visor / glasses
+      const gv = 18 * scale;
+      drawPolygon(ctx, [
+        [cx - headW * 0.55, hy0 + headH * 0.45],
+        [cx + headW * 0.55, hy0 + headH * 0.38],
+        [cx + headW * 0.5, hy0 + headH * 0.56],
+        [cx - headW * 0.5, hy0 + headH * 0.62]
+      ], emphasis ? "#00e5ff" : "#4ec5ff", null, 0.9);
+      drawPolygon(ctx, [
+        [cx - headW * 0.55, hy0 + headH * 0.45],
+        [cx + headW * 0.55, hy0 + headH * 0.38],
+        [cx + headW * 0.48, hy0 + headH * 0.32],
+        [cx - headW * 0.48, hy0 + headH * 0.38]
+      ], "#07192c", null, 0.9);
+
+      // earpiece
+      if (!isFemale) {
+        drawPolygon(ctx, [
+          [cx + headW * 0.6, hy0 + headH * 0.6],
+          [cx + headW * 0.7, hy0 + headH * 0.58],
+          [cx + headW * 0.72, hy0 + headH * 0.7],
+          [cx + headW * 0.62, hy0 + headH * 0.72]
+        ], "#00e5ff", null, 1);
+      }
+    }
+
+    function drawForegroundTriangles(ctx, w, h) {
+      const baseY = h * 0.9;
+      const palette = ["#020917", "#020812", "#030b18", "#04101f"];
+      for (let i = 0; i < 18; i++) {
+        const x = (i / 18) * w;
+        const width = w * 0.12;
+        const p = [
+          [x - width * 0.1, baseY],
+          [x + width * 0.5, baseY - h * (0.02 + 0.04 * Math.random())],
+          [x + width * 0.9, baseY]
+        ];
+        const c = palette[i % palette.length];
+        drawPolygon(ctx, p, c, null, 0.9);
+      }
+    }
+
+    function drawStage(camMode) {
+      const ctx = stageCtx;
+      const w = stageCanvas.width / window.devicePixelRatio;
+      const h = stageCanvas.height / window.devicePixelRatio;
+      ctx.clearRect(0, 0, w, h);
+
+      // background
+      drawLowPolyBackground(ctx, w, h * 0.68);
+
+      // skyline silhouettes
+      const skyBase = h * 0.66;
+      for (let i = 0; i < 22; i++) {
+        const x = (i / 22) * w;
+        const width = w * 0.08;
+        const height = h * (0.12 + 0.16 * Math.random());
+        const shade = 0.2 + Math.random() * 0.2;
+        const color = `rgba(${Math.round(10 + 40 * shade)}, ${Math.round(24 + 80 * shade)}, ${Math.round(46 + 110 * shade)}, 1)`;
+        drawPolygon(stageCtx, [
+          [x - width * 0.2, skyBase],
+          [x + width * 0.2, skyBase],
+          [x + width * 0.05, skyBase - height],
+          [x - width * 0.15, skyBase - height * 0.94]
+        ], color, null, 0.95);
+      }
+
+      // desk
+      drawDesk(ctx, w, h);
+
+      // presenters
+      const baseY = h * 0.72;
+      if (camMode === "wide") {
+        drawPresenter(ctx, w * 0.46, baseY, 1.0, true, true);
+        drawPresenter(ctx, w * 0.56, baseY + 8, 1.02, false, true);
+      } else if (camMode === "left") {
+        drawPresenter(ctx, w * 0.42, baseY, 1.18, true, true);
+        drawPresenter(ctx, w * 0.66, baseY + 12, 0.86, false, false);
+      } else {
+        drawPresenter(ctx, w * 0.58, baseY, 1.18, false, true);
+        drawPresenter(ctx, w * 0.36, baseY + 12, 0.86, true, false);
+      }
+
+      // foreground
+      drawForegroundTriangles(ctx, w, h);
+
+      // ticker bar
+      const barY0 = h * 0.88;
+      const barY1 = h * 0.94;
+      const grad = ctx.createLinearGradient(0, barY0, w, barY1);
+      grad.addColorStop(0, "#001e3c");
+      grad.addColorStop(0.5, "#003c8f");
+      grad.addColorStop(1, "#005b96");
+      drawPolygon(ctx, [[0, barY0], [w, barY0], [w, barY1], [0, barY1]], grad, null, 0.9);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("T-47 · METRIX MEDIA · BREAKING: LOCAL ANDROID TRANSFORMATION PROJECT ENTERS NEWSROOM STAGE", 12, (barY0 + barY1) / 2);
+
+      // update object count (approximation)
+      sceneObjects = 22 /*buildings*/ + 18 /*foreground*/ + 1 /*desk*/ + 2 /*presenters*/;
+      sceneObjectCountSpan.textContent = sceneObjects;
+    }
+
+    // ========== TIMELINE & SCRIPT ==========
+
+    function secondsToLabel(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      const mm = m.toString().padStart(2, "0");
+      const ss = r.toString().padStart(2, "0");
+      return `${mm}:${ss}`;
+    }
+
+    function drawTimeline(currentSec) {
+      const ctx = timelineCtx;
+      const w = timelineCanvas.width / window.devicePixelRatio;
+      const h = timelineCanvas.height / window.devicePixelRatio;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#050814";
+      ctx.fillRect(0, 0, w, h);
+
+      const margin = { left: 30, right: 12, top: 10, bottom: 18 };
+      const trackY = h * 0.5;
+      const usableW = w - margin.left - margin.right;
+
+      // base line
+      ctx.strokeStyle = "rgba(255,255,255,0.28)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(margin.left, trackY);
+      ctx.lineTo(w - margin.right, trackY);
+      ctx.stroke();
+
+      // ticks (1 minute)
+      ctx.fillStyle = "rgba(255,255,255,0.38)";
+      ctx.font = "9px system-ui, sans-serif";
+      ctx.textBaseline = "top";
+      for (let t = 0; t <= TIMELINE_DURATION; t += 60) {
+        const x = margin.left + (t / TIMELINE_DURATION) * usableW;
+        ctx.beginPath();
+        ctx.moveTo(x, trackY - 6);
+        ctx.lineTo(x, trackY + 6);
+        ctx.stroke();
+        ctx.fillText(secondsToLabel(t), x - 10, h - margin.bottom + 4);
+      }
+
+      // cues
+      const colours = ["#00e5ff", "#ffd54a", "#ff8a65", "#00ff95", "#ff5252"];
+      cues.forEach((c, i) => {
+        const x = margin.left + (c.t / TIMELINE_DURATION) * usableW;
+        const col = colours[i % colours.length];
+        ctx.beginPath();
+        ctx.arc(x, trackY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = col;
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.7)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // current time marker
+      const x = margin.left + (currentSec / TIMELINE_DURATION) * usableW;
+      ctx.beginPath();
+      ctx.moveTo(x, trackY - 10);
+      ctx.lineTo(x, trackY + 10);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // label
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText("Now: " + secondsToLabel(currentSec), margin.left, 4);
+    }
+
+    function parseScript(text) {
+      const lines = text.split(/\r?\n/);
+      const parsed = [];
+      lines.forEach((raw) => {
+        const line = raw.trim();
+        if (!line || line.startsWith("//")) return;
+        if (!line.toUpperCase().startsWith("CUE")) return;
+        const m = line.match(/^CUE\s+(\d{2}):(\d{2})\s+(.*)$/i);
+        if (!m) return;
+        const t = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+        parsed.push({
+          t,
+          label: m[3].trim()
+        });
+      });
+      parsed.sort((a, b) => a.t - b.t);
+      return parsed;
+    }
+
+    function loadDemoScript() {
+      const demo = [
+        "ACT 1",
+        "SCENE STUDIO",
+        "// Simple demo script – each CUE becomes a marker on the 15 min track.",
+        "CUE 00:03 TITLE KRAKÓW · LIVE CITY BULLETIN",
+        "CUE 00:06 ANCHOR MALE \"Good evening, this is the Metrix Media bulletin.\"",
+        "CUE 00:10 LOWERTHIRD \"Android transformation report\"",
+        "CUE 00:16 CUT TO CAM LEFT",
+        "CUE 00:21 ANCHOR FEMALE \"K-47 continues the biomech log across the city routes.\"",
+        "CUE 00:30 BREAKINGNEWS \"Unexpected spike on tram line 4.\"",
+        "CUE 00:40 CUT TO CAM WIDE",
+        "CUE 01:15 BROLL \"City low-poly skyline fly-through.\"",
+        "CUE 02:00 RETURN TO DESK",
+        "CUE 02:15 ANCHOR MALE \"Coming up after the break: Paradyzja comic layout reveal.\"",
+        "CUE 02:45 OUTRO STING"
+      ].join("\n");
+      document.getElementById("scriptArea").value = demo;
+      cues = parseScript(demo);
+      drawTimeline(getCurrentTimelineTime());
+    }
+
+    function getCurrentTimelineTime() {
+      if (!scriptPlaying) return scriptOffset;
+      const now = performance.now();
+      const elapsed = (now - scriptStartTime) / 1000;
+      return Math.min(TIMELINE_DURATION, scriptOffset + elapsed);
+    }
+
+    function startScript() {
+      if (!cues.length) {
+        cues = parseScript(document.getElementById("scriptArea").value);
+      }
+      scriptStartTime = performance.now();
+      scriptPlaying = true;
+    }
+
+    function stopScript() {
+      scriptOffset = getCurrentTimelineTime();
+      scriptPlaying = false;
+    }
+
+    function resetScript() {
+      scriptPlaying = false;
+      scriptOffset = 0;
+      drawTimeline(0);
+    }
+
+    // timeline click to jump
+    timelineCanvas.addEventListener("click", (ev) => {
+      const rect = timelineCanvas.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const w = rect.width;
+      const marginLeft = 30;
+      const marginRight = 12;
+      const usableW = w - marginLeft - marginRight;
+      const t = ((x - marginLeft) / usableW) * TIMELINE_DURATION;
+      scriptOffset = Math.max(0, Math.min(TIMELINE_DURATION, t));
+      scriptStartTime = performance.now();
+      drawTimeline(getCurrentTimelineTime());
+    });
+
+    // ========== TABS & BUTTONS ==========
+
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        const id = btn.dataset.tab;
+        document.querySelectorAll(".tab-panel").forEach((panel) => {
+          panel.classList.remove("active");
+        });
+        if (id === "timeline") document.getElementById("tab-timeline").classList.add("active");
+        if (id === "scene") document.getElementById("tab-scene").classList.add("active");
+        if (id === "script") document.getElementById("tab-script").classList.add("active");
+      });
+    });
+
+    // camera buttons
+    document.querySelectorAll(".cam-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".cam-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentCam = btn.dataset.cam;
+        if (currentCam === "wide") {
+          anchorDesc.textContent = "Evening bulletin loaded with Metrix-grade updates.";
+        } else if (currentCam === "left") {
+          anchorDesc.textContent = "Close-up on female anchor · K-47 field report in focus.";
+        } else {
+          anchorDesc.textContent = "Close-up on male anchor · technical breakdown for T-47 protocol.";
+        }
+        drawStage(currentCam);
+      });
+    });
+
+    // script buttons
+    document.getElementById("btnPlay").addEventListener("click", () => startScript());
+    document.getElementById("btnStop").addEventListener("click", () => stopScript());
+    document.getElementById("btnReset").addEventListener("click", () => resetScript());
+    document.getElementById("btnDemo").addEventListener("click", () => loadDemoScript());
+
+    // ========== MAIN LOOP ==========
+
+    function loop(now) {
+      requestAnimationFrame(loop);
+      const dt = now - lastFrameTime;
+      lastFrameTime = now;
+      frameCounter++;
+      fpsAccumTime += dt;
+      if (fpsAccumTime >= 500) {
+        const fps = (frameCounter * 1000) / fpsAccumTime;
+        fpsSpan.textContent = fps.toFixed(0);
+        fpsAccumTime = 0;
+        frameCounter = 0;
+      }
+
+      const t = getCurrentTimelineTime();
+      drawTimeline(t);
+    }
+
+    // ========== INIT ==========
+
+    function init() {
+      stageCtx = stageCanvas.getContext("2d");
+      timelineCtx = timelineCanvas.getContext("2d");
+      resizeStageCanvas();
+      resizeTimelineCanvas();
+      loadDemoScript();
+      requestAnimationFrame(loop);
+    }
+
+    init();
+  </script>
+  <!-- File: newsroom-v_0_0_32.html · Version: v0.0.32 -->
+</body>
+</html>
