@@ -243,9 +243,7 @@
 • Apps: File Manager, Note Pad, Calculator, Canvas Editor.
 • Storage survives refresh (unless content://), with RAM fallback.`},
       2:{id:2,name:'readme.txt',type:'txt',content:'Single-file retro desktop. Safe-storage wrapper enables running from content://.'},
-      3:{id:3,name:'numbers.txt',type:'txt',content:'3.14159
-2.71828
-1.61803'},
+      3:{id:3,name:'numbers.txt',type:'txt',content:'3.14159\n2.71828\n1.61803'},
       4:{id:4,name:'sample.png',type:'img',content:''}
     },desktop:[1,2,3]};
     let state; try{ state = JSON.parse(storage.getItem(FS_KEY)||'null') || defaults; }catch{ state=defaults; }
