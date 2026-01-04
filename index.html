@@ -439,6 +439,366 @@
       };
     }
 
+    /**
+     * Effect: CYBERNOID Deep Dive (extracted from demoscene_visualizer-v0_0_3.html)
+     * Three morphing holograms inside a warped tunnel with palette changes and glitch pulses.
+     */
+    function createCybernoidDeepDiveEffect(canvas) {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 1);
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.0015);
+
+      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 2000);
+      camera.position.z = 20;
+
+      const tunnelGeometry = new THREE.CylinderGeometry(50, 50, 1500, 64, 40, true);
+      tunnelGeometry.rotateX(-Math.PI / 2);
+
+      const tunnelVertex = /* glsl */ `
+        varying vec2 vUv;
+        varying vec3 vPos;
+        uniform float uTime;
+
+        void main() {
+          vUv = uv;
+          vPos = position;
+          vec3 pos = position;
+          float twist = sin(pos.z * 0.05 + uTime * 0.2) * 20.0;
+          pos.x += cos(pos.z * 0.02 + uTime * 0.5) * 15.0 + twist;
+          pos.y += sin(pos.z * 0.03 + uTime * 0.3) * 15.0 + twist;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `;
+
+      const tunnelFragment = /* glsl */ `
+        varying vec2 vUv;
+        varying vec3 vPos;
+        uniform float uTime;
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        uniform float uBeat;
+
+        void main() {
+          float gridX = step(0.97, fract(vUv.x * 24.0 + uTime * 0.1));
+          float gridY = step(0.97, fract(vUv.y * 4.0));
+
+          float lightPulse = sin(vUv.y * 10.0 - uTime * 8.0);
+          lightPulse = smoothstep(0.9, 1.0, lightPulse);
+
+          float fog = smoothstep(400.0, 50.0, abs(vPos.z));
+
+          vec3 baseColor = mix(uColor1, uColor2, sin(vUv.x * 3.14 + uTime));
+          vec3 finalColor = baseColor * (gridX + gridY * 0.5);
+          finalColor += uColor2 * lightPulse * uBeat * 3.0;
+
+          gl_FragColor = vec4(finalColor, fog);
+        }
+      `;
+
+      const holoVertex = /* glsl */ `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPos;
+        uniform float uTime;
+        uniform float uDisplace;
+
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+        float snoise(vec3 v) {
+            const vec2 C = vec2(1.0/6.0, 1.0/3.0) ;
+            const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+            vec3 i  = floor(v + dot(v, C.yyy) );
+            vec3 x0 = v - i + dot(i, C.xxx) ;
+            vec3 g = step(x0.yzx, x0.xyz);
+            vec3 l = 1.0 - g;
+            vec3 i1 = min( g.xyz, l.zxy );
+            vec3 i2 = max( g.xyz, l.zxy );
+            vec3 x1 = x0 - i1 + C.xxx;
+            vec3 x2 = x0 - i2 + C.yyy;
+            vec3 x3 = x0 - D.yyy;
+            i = mod289(i);
+            vec4 p = permute( permute( permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                    + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                    + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+            float n_ = 0.142857142857;
+            vec3  ns = n_ * D.wyz - D.xzx;
+            vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+            vec4 x_ = floor(j * ns.z);
+            vec4 y_ = floor(j - 7.0 * x_ );
+            vec4 x = x_ *ns.x + ns.yyyy;
+            vec4 y = y_ *ns.x + ns.yyyy;
+            vec4 h = 1.0 - abs(x) - abs(y);
+            vec4 b0 = vec4( x.xy, y.xy );
+            vec4 b1 = vec4( x.zw, y.zw );
+            vec4 s0 = floor(b0)*2.0 + 1.0;
+            vec4 s1 = floor(b1)*2.0 + 1.0;
+            vec4 sh = -step(h, vec4(0.0));
+            vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+            vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+            vec3 p0 = vec3(a0.xy,h.x);
+            vec3 p1 = vec3(a0.zw,h.y);
+            vec3 p2 = vec3(a1.xy,h.z);
+            vec3 p3 = vec3(a1.zw,h.w);
+            vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+            p0 *= norm.x;
+            p1 *= norm.y;
+            p2 *= norm.z;
+            p3 *= norm.w;
+            vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+            m = m * m;
+            return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3) ) );
+        }
+
+        void main() {
+          vUv = uv;
+          vNormal = normal;
+
+          float noiseVal = snoise(position * 0.1 + uTime * 0.5);
+          vec3 newPos = position + normal * (noiseVal * uDisplace * 5.0);
+
+          if (uDisplace > 0.8) {
+              newPos.x += snoise(vec3(uTime * 10.0, position.y, position.z)) * 2.0;
+          }
+
+          vPos = newPos;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+        }
+      `;
+
+      const holoFragment = /* glsl */ `
+        varying vec2 vUv;
+        varying vec3 vNormal;
+        varying vec3 vPos;
+        uniform float uTime;
+        uniform vec3 uColor;
+        uniform float uOpacity;
+
+        void main() {
+          float scan = sin(vPos.y * 2.0 - uTime * 5.0) * 0.5 + 0.5;
+          float scanLine = step(0.5, scan);
+
+          vec3 viewDir = vec3(0.0, 0.0, 1.0);
+          float rim = 1.0 - abs(dot(vNormal, viewDir));
+          rim = pow(rim, 3.0);
+
+          float grid = step(0.9, fract(vUv.x * 20.0)) + step(0.9, fract(vUv.y * 20.0));
+
+          vec3 finalColor = uColor * (rim + grid * 0.5 + scanLine * 0.2);
+
+          gl_FragColor = vec4(finalColor, uOpacity * (0.3 + rim));
+        }
+      `;
+
+      const tunnelMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor1: { value: new THREE.Color(0x00ffff) },
+          uColor2: { value: new THREE.Color(0xff00ff) },
+          uBeat: { value: 0 },
+        },
+        vertexShader: tunnelVertex,
+        fragmentShader: tunnelFragment,
+        side: THREE.DoubleSide,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+      scene.add(tunnel);
+
+      const holoMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: new THREE.Color(0xffffff) },
+          uOpacity: { value: 0 },
+          uDisplace: { value: 0 },
+        },
+        vertexShader: holoVertex,
+        fragmentShader: holoFragment,
+        transparent: true,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const shape1 = new THREE.Mesh(new THREE.TorusKnotGeometry(12, 3, 200, 32), holoMaterial.clone());
+      const shape2 = new THREE.Mesh(new THREE.IcosahedronGeometry(18, 3), holoMaterial.clone());
+      const shape3 = new THREE.Mesh(new THREE.BoxGeometry(25, 25, 25, 20, 20, 20), holoMaterial.clone());
+      const shapes = [shape1, shape2, shape3];
+
+      shapes.forEach((s) => {
+        s.position.z = -30;
+        s.scale.setScalar(0.001);
+        scene.add(s);
+      });
+
+      shape1.scale.setScalar(1);
+      shape1.material.uniforms.uOpacity.value = 1;
+
+      const composer = new EffectComposer(renderer);
+      const renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
+
+      const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.8, 0.4, 0.85);
+      bloomPass.threshold = 0;
+      bloomPass.strength = 1.8;
+      bloomPass.radius = 0.8;
+      composer.addPass(bloomPass);
+
+      const glitchPass = new GlitchPass();
+      glitchPass.goWild = false;
+      glitchPass.enabled = false;
+      composer.addPass(glitchPass);
+
+      const palettes = [
+        { c1: 0x00aaff, c2: 0xff00aa },
+        { c1: 0x00ff00, c2: 0xffaa00 },
+        { c1: 0xff0044, c2: 0xaa00ff },
+      ];
+
+      const BPM = 128;
+      const DURATION_SECONDS = 180;
+      let currentTime = 0;
+      let running = false;
+      const clock = new THREE.Clock();
+
+      let pointerX = 0;
+      let pointerY = 0;
+
+      function resize() {
+        const { clientWidth, clientHeight } = canvas;
+        if (clientWidth === 0 || clientHeight === 0) return;
+        camera.aspect = clientWidth / clientHeight;
+        camera.fov = clientHeight > clientWidth ? 90 : 70;
+        camera.updateProjectionMatrix();
+        renderer.setSize(clientWidth, clientHeight, false);
+        composer.setSize(clientWidth, clientHeight);
+      }
+
+      function onPointerMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        pointerX = (e.clientX - rect.left) / rect.width * 2 - 1;
+        pointerY = (e.clientY - rect.top) / rect.height * 2 - 1;
+      }
+
+      function onPointerDown(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = Math.max(0, Math.min(1, x / rect.width));
+        currentTime = pct * DURATION_SECONDS;
+        glitchPass.enabled = true;
+        setTimeout(() => (glitchPass.enabled = false), 200);
+      }
+
+      function renderFrame() {
+        if (!running) return;
+
+        const dt = clock.getDelta();
+        currentTime += dt;
+        if (currentTime >= DURATION_SECONDS) currentTime = 0;
+
+        const totalProgress = currentTime / DURATION_SECONDS;
+        const beatDuration = 60 / BPM;
+        const beatFrac = (currentTime % beatDuration) / beatDuration;
+        const beatHit = Math.pow(1.0 - beatFrac, 3.0);
+
+        const phaseDuration = 30;
+        const currentPhase = Math.floor(currentTime / phaseDuration) % 3;
+        const nextPhase = (currentPhase + 1) % 3;
+        const phaseProgress = (currentTime % phaseDuration) / phaseDuration;
+        const transitionStart = 0.85;
+
+        shapes.forEach((s, i) => {
+          s.rotation.x += 0.005 + beatHit * 0.01;
+          s.rotation.y += 0.01 + beatHit * 0.01;
+          s.rotation.x += (pointerY * 0.5 - s.rotation.x) * 0.05;
+          s.rotation.y += (pointerX * 0.5 - s.rotation.y) * 0.05;
+
+          const col = new THREE.Color(palettes[currentPhase].c2);
+          col.lerp(new THREE.Color(palettes[nextPhase].c1), phaseProgress > 0.5 ? (phaseProgress - 0.5) * 2 : 0);
+          s.material.uniforms.uColor.value = col;
+          s.material.uniforms.uTime.value = currentTime;
+        });
+
+        if (phaseProgress > transitionStart) {
+          const transitionFactor = (phaseProgress - transitionStart) / (1.0 - transitionStart);
+          shapes[currentPhase].scale.setScalar(1.0 + transitionFactor * 2.0);
+          shapes[currentPhase].material.uniforms.uOpacity.value = 1.0 - transitionFactor;
+          shapes[currentPhase].material.uniforms.uDisplace.value = transitionFactor;
+
+          shapes[nextPhase].scale.setScalar(0.1 + transitionFactor * 0.9);
+          shapes[nextPhase].material.uniforms.uOpacity.value = transitionFactor;
+          shapes[nextPhase].material.uniforms.uDisplace.value = 1.0 - transitionFactor;
+        } else {
+          shapes.forEach((s, i) => {
+            if (i === currentPhase) {
+              s.scale.setScalar(1.0 + beatHit * 0.05);
+              s.material.uniforms.uOpacity.value = 1.0;
+              s.material.uniforms.uDisplace.value = 0.0;
+            } else {
+              s.scale.setScalar(0.001);
+              s.material.uniforms.uOpacity.value = 0.0;
+            }
+          });
+        }
+
+        tunnelMaterial.uniforms.uTime.value = currentTime;
+        tunnelMaterial.uniforms.uBeat.value = beatHit;
+        const p1 = palettes[currentPhase];
+        tunnelMaterial.uniforms.uColor1.value.lerp(new THREE.Color(p1.c1), 0.05);
+        tunnelMaterial.uniforms.uColor2.value.lerp(new THREE.Color(p1.c2), 0.05);
+
+        camera.position.z = 20 - totalProgress * 30 * (DURATION_SECONDS / phaseDuration);
+        if (camera.position.z < tunnel.position.z - 500) {
+          tunnel.position.z = camera.position.z - 500;
+        }
+
+        shapes.forEach((s) => {
+          s.position.z = camera.position.z - 40;
+        });
+
+        composer.render();
+      }
+
+      function dispose() {
+        renderer.setAnimationLoop(null);
+        tunnelGeometry.dispose();
+        tunnelMaterial.dispose();
+        shapes.forEach((s) => {
+          s.geometry.dispose();
+          s.material.dispose();
+        });
+        composer.dispose();
+        renderer.dispose();
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerdown', onPointerDown);
+      }
+
+      return {
+        name: 'CYBERNOID Deep Dive',
+        start() {
+          if (running) return;
+          running = true;
+          clock.start();
+          resize();
+          canvas.addEventListener('pointermove', onPointerMove);
+          canvas.addEventListener('pointerdown', onPointerDown);
+          renderer.setAnimationLoop(renderFrame);
+        },
+        stop() {
+          running = false;
+          dispose();
+        },
+        resize,
+      };
+    }
+
     const effects = [
       {
         id: 'cyber-tunnel',
@@ -446,6 +806,13 @@
         description: 'Warping grid tunnel with bloom, glitch hits, and a rotating totem lifted from the demoscene visualizer.',
         tags: ['WebGL', 'PostFX', 'Procedural'],
         factory: createCyberTunnelEffect,
+      },
+      {
+        id: 'cybernoid-deep-dive',
+        name: 'CYBERNOID: Deep Dive',
+        description: 'Three morphing holograms pulse inside a warped tunnel with glitchable scrubbing and palette swaps.',
+        tags: ['WebGL', 'Shaders', 'Demoscene'],
+        factory: createCybernoidDeepDiveEffect,
       },
     ];
 
