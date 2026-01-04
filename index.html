@@ -656,6 +656,8 @@
       glitchPass.enabled = false;
       composer.addPass(glitchPass);
 
+      let glitchTimeoutId = null;
+
       const palettes = [
         { c1: 0x00aaff, c2: 0xff00aa },
         { c1: 0x00ff00, c2: 0xffaa00 },
@@ -670,6 +672,10 @@
 
       let pointerX = 0;
       let pointerY = 0;
+
+      const nextPhaseColor = new THREE.Color();
+      const tunnelColor1 = new THREE.Color();
+      const tunnelColor2 = new THREE.Color();
 
       function resize() {
         const { clientWidth, clientHeight } = canvas;
@@ -693,7 +699,11 @@
         const pct = Math.max(0, Math.min(1, x / rect.width));
         currentTime = pct * DURATION_SECONDS;
         glitchPass.enabled = true;
-        setTimeout(() => (glitchPass.enabled = false), 200);
+        if (glitchTimeoutId) clearTimeout(glitchTimeoutId);
+        glitchTimeoutId = setTimeout(() => {
+          glitchPass.enabled = false;
+          glitchTimeoutId = null;
+        }, 200);
       }
 
       function renderFrame() {
@@ -720,9 +730,12 @@
           s.rotation.x += (pointerY * 0.5 - s.rotation.x) * 0.05;
           s.rotation.y += (pointerX * 0.5 - s.rotation.y) * 0.05;
 
-          const col = new THREE.Color(palettes[currentPhase].c2);
-          col.lerp(new THREE.Color(palettes[nextPhase].c1), phaseProgress > 0.5 ? (phaseProgress - 0.5) * 2 : 0);
-          s.material.uniforms.uColor.value = col;
+          s.material.uniforms.uColor.value.set(palettes[currentPhase].c2);
+          nextPhaseColor.set(palettes[nextPhase].c1);
+          s.material.uniforms.uColor.value.lerp(
+            nextPhaseColor,
+            phaseProgress > 0.5 ? (phaseProgress - 0.5) * 2 : 0,
+          );
           s.material.uniforms.uTime.value = currentTime;
         });
 
@@ -751,8 +764,10 @@
         tunnelMaterial.uniforms.uTime.value = currentTime;
         tunnelMaterial.uniforms.uBeat.value = beatHit;
         const p1 = palettes[currentPhase];
-        tunnelMaterial.uniforms.uColor1.value.lerp(new THREE.Color(p1.c1), 0.05);
-        tunnelMaterial.uniforms.uColor2.value.lerp(new THREE.Color(p1.c2), 0.05);
+        tunnelColor1.set(p1.c1);
+        tunnelColor2.set(p1.c2);
+        tunnelMaterial.uniforms.uColor1.value.lerp(tunnelColor1, 0.05);
+        tunnelMaterial.uniforms.uColor2.value.lerp(tunnelColor2, 0.05);
 
         camera.position.z = 20 - totalProgress * 30 * (DURATION_SECONDS / phaseDuration);
         if (camera.position.z < tunnel.position.z - 500) {
@@ -768,13 +783,20 @@
 
       function dispose() {
         renderer.setAnimationLoop(null);
+        if (glitchTimeoutId) {
+          clearTimeout(glitchTimeoutId);
+          glitchTimeoutId = null;
+        }
         tunnelGeometry.dispose();
         tunnelMaterial.dispose();
         shapes.forEach((s) => {
           s.geometry.dispose();
           s.material.dispose();
         });
-        composer.dispose();
+        if (composer.renderTarget1) composer.renderTarget1.dispose();
+        if (composer.renderTarget2) composer.renderTarget2.dispose();
+        if (bloomPass.dispose) bloomPass.dispose();
+        if (glitchPass.dispose) glitchPass.dispose();
         renderer.dispose();
         canvas.removeEventListener('pointermove', onPointerMove);
         canvas.removeEventListener('pointerdown', onPointerDown);
