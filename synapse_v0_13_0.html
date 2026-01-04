@@ -1,0 +1,427 @@
+<!-- synapse_v0_13_0.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYNAPSE: 13 | THE GENESIS CONVERGENCE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;900&family=Noto+Sans+SC:wght@900&display=swap');
+
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff00ff;
+        }
+
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Share Tech Mono', monospace; user-select: none; }
+        canvas { display: block; width: 100vw; height: 100vh; }
+        
+        /* LOADING & START SCREEN */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(15px); transition: opacity 0.8s;
+        }
+
+        .glitch-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px; color: white; border: 2px solid var(--neon-cyan);
+            padding: 20px 60px; text-transform: uppercase; letter-spacing: 8px;
+            box-shadow: 0 0 20px var(--neon-cyan); cursor: pointer;
+            transition: 0.2s; position: relative;
+        }
+        .glitch-btn:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 50px var(--neon-cyan); }
+
+        #loading-bar-container { width: 300px; height: 4px; background: #222; margin-top: 30px; position: relative; }
+        #loading-bar { width: 0%; height: 100%; background: var(--neon-pink); transition: width 0.1s; box-shadow: 0 0 10px var(--neon-pink); }
+
+        /* HUD & UI */
+        #hud-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: none; z-index: 10;
+        }
+
+        .hud-item { position: absolute; font-size: 13px; color: rgba(0, 243, 255, 0.8); text-shadow: 0 0 8px var(--neon-cyan); }
+        .top-left { top: 40px; left: 40px; border-left: 4px solid var(--neon-pink); padding-left: 15px; }
+        .top-right { top: 40px; right: 40px; text-align: right; border-right: 4px solid var(--neon-cyan); padding-right: 15px; }
+        .bottom-right { bottom: 40px; right: 40px; font-size: 30px; color: #fff; font-family: 'Orbitron'; }
+
+        /* TYPOGRAPHY ENGINE */
+        #flash-layer {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; text-align: center; pointer-events: none; z-index: 50;
+        }
+        .flash-word {
+            font-family: 'Noto Sans SC', 'Orbitron', sans-serif;
+            font-weight: 900; font-size: 16vw; line-height: 0.8;
+            color: #fff; text-transform: uppercase;
+            text-shadow: 0 0 60px rgba(0,255,255,1);
+            opacity: 0; transform: scale(0.5);
+        }
+        .flash-active { animation: flash-anim 0.25s forwards cubic-bezier(0.19, 1, 0.22, 1); }
+        @keyframes flash-anim {
+            0% { opacity: 1; transform: scale(1.4) rotate(10deg); filter: blur(20px); }
+            20% { opacity: 1; transform: scale(1.0) rotate(0deg); filter: blur(0px); }
+            100% { opacity: 0; transform: scale(2.2) rotate(-5deg); filter: blur(30px); }
+        }
+
+        /* CINEMATIC BARS */
+        .cinematic-bar {
+            position: absolute; left: 0; width: 100%; height: 0vh; 
+            background: black; z-index: 90; transition: height 0.2s ease-out;
+        }
+        #bar-top { top: 0; }
+        #bar-bottom { bottom: 0; }
+
+        .scanlines {
+            position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.3));
+            background-size: 100% 4px; pointer-events: none; z-index: 95; opacity: 0.3;
+        }
+        
+        #progress-bar {
+            position: absolute; top: 0; left: 0; height: 4px; background: var(--neon-cyan); width: 0%; z-index: 99;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1 style="letter-spacing: 15px; font-weight: 100; font-size: 50px; color: var(--neon-cyan); text-shadow: 0 0 20px var(--neon-cyan); font-family: 'Orbitron';">SYNAPSE:13</h1>
+        <div class="glitch-btn" id="start-btn">INITIALIZING...</div>
+        <div id="loading-bar-container"><div id="loading-bar"></div></div>
+        <p style="margin-top: 20px; font-size: 10px; color: #444; letter-spacing: 3px;">HYBRID_CONVERGENCE_ENGINE // 180S DURATION</p>
+    </div>
+
+    <div id="bar-top" class="cinematic-bar"></div>
+    <div id="bar-bottom" class="cinematic-bar"></div>
+
+    <div id="hud-layer">
+        <div class="hud-item top-left">
+            <div id="status-text">SYS: CONVERGING</div>
+            <div id="scene-text" style="color: var(--neon-pink); font-weight: bold; font-size: 16px;">PHASE: INIT</div>
+        </div>
+        <div class="hud-item top-right">
+            <div>GPU: <span id="gpu-val">ULTRA</span></div>
+            <div>CORE: <span id="core-status">ACTIVE</span></div>
+        </div>
+        <div class="hud-item bottom-right" id="timer">00:00:00</div>
+        <div id="flash-layer">
+            <div id="big-text" class="flash-word">WARNING</div>
+        </div>
+    </div>
+
+    <div class="scanlines"></div>
+    <div id="progress-bar"></div>
+
+    <script type="module">
+        import * as THREE from 'https://esm.sh/three@0.157.0';
+        import { EffectComposer } from 'https://esm.sh/three@0.157.0/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'https://esm.sh/three@0.157.0/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'https://esm.sh/three@0.157.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+        import { ShaderPass } from 'https://esm.sh/three@0.157.0/examples/jsm/postprocessing/ShaderPass.js';
+        import { GlitchPass } from 'https://esm.sh/three@0.157.0/examples/jsm/postprocessing/GlitchPass.js';
+
+        // --- CONSTANTS ---
+        const DURATION = 180;
+        const BPM = 142;
+        const BEAT_TIME = 60 / BPM;
+        const ROAD_WIDTH = 15;
+
+        // --- AUDIO ENGINE ---
+        class AudioEngine {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.master = this.ctx.createGain();
+                this.master.gain.value = 0.6;
+                this.analyser = this.ctx.createAnalyser();
+                this.analyser.fftSize = 512;
+                this.master.connect(this.analyser);
+                this.analyser.connect(this.ctx.destination);
+                this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+            }
+            start() {
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+                this.startTime = this.ctx.currentTime;
+                this.scheduleSequence();
+            }
+            getAnalysis() {
+                this.analyser.getByteFrequencyData(this.dataArray);
+                return { 
+                    bass: this.dataArray[2]/255, 
+                    mid: this.dataArray[50]/255,
+                    high: this.dataArray[120]/255
+                };
+            }
+            scheduleSequence() {
+                const t0 = this.ctx.currentTime;
+                for (let i = 0; i < (DURATION * 12); i++) {
+                    const t = t0 + i * (BEAT_TIME/2);
+                    if(i % 2 === 0) { // Kicks
+                        const osc = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        osc.frequency.setValueAtTime(150, t);
+                        osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.3);
+                        g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                        osc.connect(g); g.connect(this.master);
+                        osc.start(t); osc.stop(t + 0.3);
+                    }
+                    if(i % 8 === 4) { // Snare/Noise
+                        const osc = this.ctx.createOscillator();
+                        const g = this.ctx.createGain();
+                        osc.type = 'triangle'; osc.frequency.setValueAtTime(800, t);
+                        g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t+0.05);
+                        osc.connect(g); g.connect(this.master); osc.start(t); osc.stop(t+0.1);
+                    }
+                }
+            }
+        }
+
+        // --- VISUAL ENGINE SETUP ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a0014, 0.012);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2500);
+        const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+        document.body.appendChild(renderer.domElement);
+
+        const composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 2.5, 0.4, 0.85);
+        composer.addPass(bloom);
+
+        const RGBShader = {
+            uniforms: { "tDiffuse": { value: null }, "amount": { value: 0.005 }, "time": { value: 0 } },
+            vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+            fragmentShader: `
+                uniform sampler2D tDiffuse; uniform float amount; uniform float time; varying vec2 vUv;
+                float rand(vec2 co){ return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453); }
+                void main() {
+                    vec2 uv = vUv;
+                    float scan = sin(uv.y * 800.0 + time * 15.0) * 0.03;
+                    vec4 cr = texture2D(tDiffuse, uv + vec2(amount + scan, 0.0));
+                    vec4 cg = texture2D(tDiffuse, uv);
+                    vec4 cb = texture2D(tDiffuse, uv - vec2(amount + scan, 0.0));
+                    gl_FragColor = vec4(cr.r, cg.g, cb.b, 1.0) + vec4(rand(uv * time) * 0.06);
+                }`
+        };
+        const rgbPass = new ShaderPass(RGBShader);
+        composer.addPass(rgbPass);
+
+        const wildGlitchPass = new GlitchPass();
+        wildGlitchPass.enabled = false;
+        composer.addPass(wildGlitchPass);
+
+        // --- ASSET BANK ---
+        
+        // 1. DUAL GRIDS
+        const gridGroup = new THREE.Group();
+        const gridGeom = new THREE.PlaneGeometry(1000, 1000, 80, 80);
+        const gridT = new THREE.Mesh(gridGeom, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xff00ff, wireframe: true }));
+        const gridB = new THREE.Mesh(gridGeom, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00ffff, wireframe: true }));
+        gridT.rotation.x = -Math.PI/2; gridT.position.y = 80;
+        gridB.rotation.x = -Math.PI/2; gridB.position.y = -40;
+        gridGroup.add(gridT, gridB);
+        scene.add(gridGroup);
+
+        // 2. DATA VORTEX
+        const pCount = 15000;
+        const pArr = new Float32Array(pCount * 3);
+        for(let i=0; i<pArr.length; i++) pArr[i] = (Math.random()-0.5)*800;
+        const vortexGeo = new THREE.BufferGeometry();
+        vortexGeo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
+        const vortex = new THREE.Points(vortexGeo, new THREE.PointsMaterial({ size: 0.5, color: 0xff00aa, blending: THREE.AdditiveBlending, transparent: true }));
+        scene.add(vortex);
+
+        // 3. THE GENESIS CORE (Liquid Metal Shader)
+        const coreMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 }, uBass: { value: 0 } },
+            vertexShader: `uniform float uTime; uniform float uBass; varying vec2 vUv; void main() { vUv = uv; vec3 p = position + normal * sin(position.y * 4.0 + uTime * 6.0) * uBass * 6.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+            fragmentShader: `uniform float uTime; varying vec2 vUv; void main() { gl_FragColor = vec4(0.1, 0.9, 1.0, 1.0) * (0.4 + 0.6 * sin(uTime * 4.0 + vUv.y * 20.0)); }`,
+            wireframe: true
+        });
+        const core = new THREE.Mesh(new THREE.IcosahedronGeometry(10, 40), coreMat);
+        scene.add(core);
+
+        // 4. RINGS (Genesis)
+        const ring1 = new THREE.Mesh(new THREE.TorusGeometry(18, 0.2, 16, 100), new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5 }));
+        const ring2 = new THREE.Mesh(new THREE.TorusGeometry(22, 0.15, 16, 100), new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.5 }));
+        ring2.rotation.x = Math.PI/2;
+        scene.add(ring1, ring2);
+
+        // 5. WARP TUNNEL
+        const warpTunnel = new THREE.Mesh(
+            new THREE.CylinderGeometry(50, 50, 1200, 32, 100, true), 
+            new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.08, side: THREE.DoubleSide })
+        );
+        warpTunnel.rotation.x = Math.PI/2; warpTunnel.scale.set(-1,1,1);
+        scene.add(warpTunnel);
+
+        // 6. HIGHWAY ASSETS
+        const sun = new THREE.Mesh(new THREE.CircleGeometry(70, 64), new THREE.MeshBasicMaterial({ color: 0xff4400 }));
+        sun.position.set(0, 40, -500);
+        scene.add(sun);
+
+        const cars = [];
+        for(let i=0; i<30; i++){
+            const car = new THREE.Mesh(new THREE.BoxGeometry(2, 1, 10), new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xff0055 : 0x00ffff }));
+            car.position.set((Math.random()-0.5)*40, 1, -Math.random()*500);
+            scene.add(car);
+            cars.push(car);
+        }
+
+        // --- UTILS ---
+        const words = ["警告", "SYNC", "核心", "速度", "BREACH", "SINGULARITY", "断裂", "ERROR", "VOID", "极限"];
+        const flashEl = document.getElementById('big-text');
+        const barT = document.getElementById('bar-top');
+        const barB = document.getElementById('bar-bottom');
+        
+        function flash(text) {
+            flashEl.innerText = text || words[Math.floor(Math.random() * words.length)];
+            flashEl.style.color = Math.random() > 0.5 ? "#0ff" : "#fff";
+            flashEl.classList.remove('flash-active');
+            void flashEl.offsetWidth; 
+            flashEl.classList.add('flash-active');
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = Math.floor(sec % 60).toString().padStart(2, '0');
+            const ms = Math.floor((sec % 1) * 100).toString().padStart(2, '0');
+            return `${m}:${s}:${ms}`;
+        }
+
+        // --- MAIN LOOP ---
+        const audio = new AudioEngine();
+        let startTime = 0, running = false, lastTime = 0, standby = false;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const now = performance.now();
+            const delta = Math.min((now - lastTime) / 1000, 0.1);
+            lastTime = now;
+            
+            const elapsedSeconds = running ? (Date.now() - startTime) / 1000 : 0;
+            const { bass, mid, high } = audio.getAnalysis();
+            
+            if(running) {
+                document.getElementById('timer').innerText = formatTime(elapsedSeconds);
+                document.getElementById('progress-bar').style.width = (elapsedSeconds/DURATION)*100 + "%";
+            }
+
+            // Object Physics
+            core.rotation.y += 0.02 + bass * 0.1;
+            core.scale.setScalar(1 + bass * 0.9);
+            coreMat.uniforms.uTime.value = running ? elapsedSeconds : now * 0.001;
+            coreMat.uniforms.uBass.value = bass;
+            
+            ring1.rotation.z += delta * 0.5; ring1.rotation.x += mid * 0.1;
+            ring2.rotation.z -= delta * 0.4; ring2.scale.setScalar(1 + bass * 0.5);
+
+            warpTunnel.rotation.y += delta * 0.4;
+            warpTunnel.material.color.setHSL((elapsedSeconds * 0.1) % 1, 1, 0.5);
+            
+            gridB.position.z = (elapsedSeconds * 180) % 50;
+            gridT.position.z = (elapsedSeconds * 180) % 50;
+
+            cars.forEach(c => {
+                c.position.z += 250 * delta;
+                if(c.position.z > 100) c.position.z = -500;
+            });
+
+            // Vortex Swirl
+            const pArr = vortex.geometry.attributes.position.array;
+            for(let i=0; i<pArr.length; i+=3) {
+                let x = pArr[i], z = pArr[i+2];
+                const dist = Math.sqrt(x*x + z*z);
+                const angle = 0.003 * (300 - dist) + (bass * 0.05);
+                pArr[i] = x * Math.cos(angle) - z * Math.sin(angle);
+                pArr[i+2] = x * Math.sin(angle) + z * Math.cos(angle);
+            }
+            vortex.geometry.attributes.position.needsUpdate = true;
+            
+            rgbPass.uniforms.time.value = now * 0.001;
+            rgbPass.uniforms.amount.value = 0.005 + (bass * 0.12);
+
+            if (standby) {
+                // Living Standby Mode
+                camera.position.set(0, 80, 200); camera.lookAt(0,0,0);
+                scene.background = new THREE.Color(0x050005);
+            } else if (running) {
+                // --- TIMELINE SEQUENCER (6s BLOCKS) ---
+                const segment = Math.floor(elapsedSeconds / 6);
+                document.getElementById('scene-text').innerText = "PHASE: " + segment.toString().padStart(2, '0');
+                wildGlitchPass.enabled = false; barT.style.height = '0vh'; barB.style.height = '0vh'; camera.fov = 75;
+
+                // --- DIRECTOR CUTS (The 35s Effect Expanded) ---
+                if (bass > 0.82) {
+                    const cuts = [
+                        [0, 200, 0],   // Top
+                        [0, 0, 30],    // Close
+                        [100, 50, 100], // Wide Angle
+                        [-80, -30, 20]  // Dutch Angle
+                    ];
+                    const p = cuts[Math.floor(elapsedSeconds * 12) % 4];
+                    camera.position.set(p[0], p[1], p[2]);
+                    camera.lookAt(0,0,0);
+                    camera.rotation.z = (Math.random()-0.5) * 1.5;
+                    flash();
+                    wildGlitchPass.enabled = (Math.random() > 0.6);
+                    barT.style.height = '15vh'; barB.style.height = '15vh';
+                }
+
+                // Dynamic FOV for high speed feel
+                if (segment % 3 === 0) camera.fov = 115;
+
+                // EXIT LOGIC
+                if (elapsedSeconds > DURATION) {
+                    running = false; standby = true;
+                    const overlay = document.getElementById('overlay');
+                    overlay.style.display = 'flex';
+                    overlay.style.opacity = 1;
+                    overlay.innerHTML = `
+                        <h1 style="font-family:'Orbitron'; letter-spacing:10px; color: var(--neon-cyan);">CORE STABILIZED</h1>
+                        <p style="color:#fff; margin-bottom:20px;">SEQUENCE COMPLETED // SYSTEMS IDLE</p>
+                        <button id="reboot-btn">REBOOT SYSTEM</button>
+                    `;
+                    document.getElementById('reboot-btn').onclick = () => location.reload();
+                }
+            }
+
+            camera.updateProjectionMatrix();
+            composer.render();
+        }
+
+        // --- INIT ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Loading Progress Mock
+        let lp = 0;
+        const startBtn = document.getElementById('start-btn');
+        const loadInt = setInterval(() => {
+            lp += Math.random() * 8;
+            if (lp >= 100) {
+                lp = 100; clearInterval(loadInt);
+                startBtn.innerText = "ENGAGE SYSTEM";
+            }
+            document.getElementById('loading-bar').style.width = lp + "%";
+        }, 80);
+
+        startBtn.addEventListener('click', () => {
+            if (lp < 100) return;
+            document.getElementById('start-screen').style.opacity = 0;
+            setTimeout(() => { document.getElementById('start-screen').style.display = 'none'; }, 800);
+            document.getElementById('hud-layer').style.display = 'block';
+            audio.start(); startTime = Date.now(); lastTime = performance.now(); running = true; animate();
+        });
+
+    </script>
+</body>
+</html>
+<!-- synapse_v0_13_0.html -->
