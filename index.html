@@ -821,6 +821,156 @@
       };
     }
 
+    /**
+     * Effect: Prismatic Nebula
+     * Swarming particles orbit crystalline shards inside a color-shifting fog.
+     */
+    function createPrismaticNebulaEffect(canvas) {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 1);
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x02030a, 0.0025);
+
+      const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
+      camera.position.set(0, 5, 45);
+
+      const palettes = [
+        { c1: 0x4cf3ff, c2: 0xff4fd8 },
+        { c1: 0xffc857, c2: 0x4ade80 },
+        { c1: 0xa78bfa, c2: 0x5eead4 },
+      ];
+      let paletteIndex = 0;
+
+      const starsGeometry = new THREE.BufferGeometry();
+      const starCount = 1500;
+      const positions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        const i3 = i * 3;
+        const radius = Math.random() * 120 + 20;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos((Math.random() * 2) - 1);
+        positions[i3] = Math.sin(phi) * Math.cos(theta) * radius;
+        positions[i3 + 1] = Math.sin(phi) * Math.sin(theta) * radius;
+        positions[i3 + 2] = Math.cos(phi) * radius;
+      }
+      starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const starsMaterial = new THREE.PointsMaterial({ color: palettes[0].c1, size: 0.6, transparent: true, opacity: 0.8 });
+      const stars = new THREE.Points(starsGeometry, starsMaterial);
+      scene.add(stars);
+
+      const shardGeo = new THREE.IcosahedronGeometry(6, 1);
+      const shardMat = new THREE.MeshStandardMaterial({
+        color: palettes[0].c2,
+        metalness: 0.8,
+        roughness: 0.15,
+        transparent: true,
+        opacity: 0.9,
+        emissive: new THREE.Color(0x111111),
+        emissiveIntensity: 0.8,
+      });
+
+      const shardCount = 14;
+      const shards = [];
+      for (let i = 0; i < shardCount; i++) {
+        const shard = new THREE.Mesh(shardGeo.clone(), shardMat.clone());
+        shard.position.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
+        shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        shard.scale.setScalar(0.6 + Math.random() * 1.8);
+        scene.add(shard);
+        shards.push(shard);
+      }
+
+      const ambient = new THREE.AmbientLight(0x404040, 1.2);
+      const rimLight = new THREE.PointLight(palettes[0].c2, 20, 200);
+      rimLight.position.set(0, 15, 30);
+      scene.add(ambient, rimLight);
+
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.1, 0.4, 0.85);
+      bloomPass.threshold = 0.1;
+      bloomPass.strength = 1.6;
+      bloomPass.radius = 0.6;
+      composer.addPass(bloomPass);
+
+      const clock = new THREE.Clock();
+      let running = false;
+
+      function resize() {
+        const { clientWidth, clientHeight } = canvas;
+        if (clientWidth === 0 || clientHeight === 0) return;
+        camera.aspect = clientWidth / clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(clientWidth, clientHeight, false);
+        composer.setSize(clientWidth, clientHeight);
+      }
+
+      function renderFrame() {
+        if (!running) return;
+        const elapsed = clock.getElapsedTime();
+
+        stars.rotation.y = elapsed * 0.02;
+        stars.rotation.x = Math.sin(elapsed * 0.1) * 0.1;
+
+        shards.forEach((shard, i) => {
+          shard.rotation.x += 0.005 + i * 0.0005;
+          shard.rotation.y += 0.006 + i * 0.0004;
+          shard.position.x = Math.sin(elapsed * 0.2 + i) * 12;
+          shard.position.y = Math.cos(elapsed * 0.15 + i * 0.7) * 10;
+        });
+
+        const phase = Math.floor(elapsed / 12) % palettes.length;
+        if (phase !== paletteIndex) {
+          paletteIndex = phase;
+        }
+        const nextPalette = palettes[(paletteIndex + 1) % palettes.length];
+        const blend = Math.min(1, (elapsed % 12) / 4);
+
+        rimLight.color.lerpColors(new THREE.Color(palettes[paletteIndex].c2), new THREE.Color(nextPalette.c2), blend);
+        starsMaterial.color.lerpColors(new THREE.Color(palettes[paletteIndex].c1), new THREE.Color(nextPalette.c1), blend);
+        shards.forEach((shard) => {
+          shard.material.color.lerpColors(new THREE.Color(palettes[paletteIndex].c2), new THREE.Color(nextPalette.c2), blend);
+          shard.material.emissive.lerpColors(new THREE.Color(0x111111), new THREE.Color(palettes[paletteIndex].c2), 0.5);
+        });
+
+        camera.position.x = Math.sin(elapsed * 0.15) * 10;
+        camera.position.y = 6 + Math.sin(elapsed * 0.25) * 2;
+        camera.lookAt(0, 0, 0);
+
+        composer.render();
+      }
+
+      function dispose() {
+        renderer.setAnimationLoop(null);
+        starsGeometry.dispose();
+        starsMaterial.dispose();
+        shards.forEach((shard) => {
+          shard.geometry.dispose();
+          shard.material.dispose();
+        });
+        composer.dispose();
+        renderer.dispose();
+      }
+
+      return {
+        name: 'Prismatic Nebula',
+        start() {
+          if (running) return;
+          running = true;
+          clock.start();
+          resize();
+          renderer.setAnimationLoop(renderFrame);
+        },
+        stop() {
+          running = false;
+          dispose();
+        },
+        resize,
+      };
+    }
+
     const effects = [
       {
         id: 'cyber-tunnel',
@@ -835,6 +985,13 @@
         description: 'Three morphing holograms pulse inside a warped tunnel with glitchable scrubbing and palette swaps.',
         tags: ['WebGL', 'Shaders', 'Demoscene'],
         factory: createCybernoidDeepDiveEffect,
+      },
+      {
+        id: 'prismatic-nebula',
+        name: 'Prismatic Nebula',
+        description: 'Shifting shards and stardust swirling through a kaleidoscopic nebula.',
+        tags: ['WebGL', 'Particles', 'Bloom'],
+        factory: createPrismaticNebulaEffect,
       },
     ];
 
