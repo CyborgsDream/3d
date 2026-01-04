@@ -97,6 +97,14 @@
       box-shadow: var(--shadow);
     }
 
+    .stage-action {
+      position: absolute;
+      z-index: 4;
+      top: 12px;
+      right: 12px;
+      padding: 8px 12px;
+    }
+
     #primary-canvas {
       width: 100%;
       height: 100%;
@@ -269,6 +277,7 @@
       </div>
     </div>
     <div id="primary-stage">
+      <button id="fullscreen-toggle" class="btn stage-action" type="button">Enter Fullscreen</button>
       <canvas id="primary-canvas"></canvas>
       <div class="primary-overlay">
         <span id="primary-title">—</span>
@@ -1256,6 +1265,236 @@
       };
     }
 
+    /**
+     * Effect: Morphing Showcase
+     * A curated megamix that blends the tunnel, holograms, shards, and stardust with cinematic zooms.
+     */
+    function createMorphingShowcaseEffect(canvas) {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 1);
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x01020a, 0.0015);
+
+      const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 3000);
+      camera.position.set(0, 4, 22);
+
+      const ambient = new THREE.AmbientLight(0x404040, 1.2);
+      const mainLight = new THREE.PointLight(0x4cf3ff, 18, 400);
+      mainLight.position.set(0, 10, 24);
+      scene.add(ambient, mainLight);
+
+      const tunnelGeometry = new THREE.CylinderGeometry(80, 70, 2000, 64, 64, true);
+      tunnelGeometry.rotateX(-Math.PI / 2);
+
+      const tunnelMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor1: { value: new THREE.Color(0x4cf3ff) },
+          uColor2: { value: new THREE.Color(0xff4fd8) },
+        },
+        vertexShader: /* glsl */ `
+          varying vec2 vUv;
+          varying vec3 vPos;
+          uniform float uTime;
+
+          void main() {
+            vUv = uv;
+            vPos = position;
+            vec3 pos = position;
+            float swirl = sin(pos.z * 0.05 + uTime * 0.6) * 18.0;
+            pos.x += cos(pos.z * 0.03 + uTime) * 14.0 + swirl;
+            pos.y += sin(pos.z * 0.04 + uTime * 0.7) * 14.0 - swirl * 0.5;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+          }
+        `,
+        fragmentShader: /* glsl */ `
+          varying vec2 vUv;
+          varying vec3 vPos;
+          uniform float uTime;
+          uniform vec3 uColor1;
+          uniform vec3 uColor2;
+
+          void main() {
+            float gridX = step(0.98, fract(vUv.x * 28.0 + uTime * 0.1));
+            float gridY = step(0.98, fract(vUv.y * 6.0));
+            float pulse = sin(vUv.y * 18.0 - uTime * 7.0);
+            float fog = smoothstep(600.0, 40.0, abs(vPos.z));
+            vec3 base = mix(uColor1, uColor2, sin(vUv.x * 3.1415 + uTime));
+            vec3 finalColor = base * (gridX + gridY * 0.8) + base * pulse * 0.4;
+            gl_FragColor = vec4(finalColor, fog);
+          }
+        `,
+        side: THREE.DoubleSide,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+
+      const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+      scene.add(tunnel);
+
+      const starGeometry = new THREE.BufferGeometry();
+      const starCount = 2200;
+      const starPositions = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        const i3 = i * 3;
+        const radius = Math.random() * 260 + 60;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(Math.random() * 2 - 1);
+        starPositions[i3] = Math.sin(phi) * Math.cos(theta) * radius;
+        starPositions[i3 + 1] = Math.sin(phi) * Math.sin(theta) * radius;
+        starPositions[i3 + 2] = Math.cos(phi) * radius;
+      }
+      starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+      const starMaterial = new THREE.PointsMaterial({ color: 0x6de3ff, size: 0.8, transparent: true, opacity: 0.7 });
+      const stars = new THREE.Points(starGeometry, starMaterial);
+      scene.add(stars);
+
+      const holoMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 0.5,
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.0,
+        emissive: new THREE.Color(0x0a0f1c),
+        emissiveIntensity: 1.6,
+      });
+
+      const shapes = [
+        new THREE.Mesh(new THREE.TorusKnotGeometry(18, 4, 240, 32), holoMaterial.clone()),
+        new THREE.Mesh(new THREE.IcosahedronGeometry(16, 2), holoMaterial.clone()),
+        new THREE.Mesh(new THREE.BoxGeometry(28, 28, 28, 24, 24, 24), holoMaterial.clone()),
+        new THREE.Mesh(new THREE.OctahedronGeometry(20, 3), holoMaterial.clone()),
+      ];
+
+      shapes.forEach((shape, i) => {
+        shape.position.set(0, 0, -30 - i * 2);
+        shape.scale.setScalar(0.5 + i * 0.1);
+        scene.add(shape);
+      });
+
+      const palettes = [
+        { color: 0x4cf3ff, secondary: 0xff4fd8 },
+        { color: 0xf97316, secondary: 0x67e8f9 },
+        { color: 0xa78bfa, secondary: 0x22c55e },
+      ];
+
+      const composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.4, 0.35, 0.82);
+      bloomPass.threshold = 0.1;
+      bloomPass.strength = 1.8;
+      bloomPass.radius = 0.7;
+      composer.addPass(bloomPass);
+
+      let running = false;
+      let manualTime = 0;
+      const clock = new THREE.Clock();
+      const TOTAL_DURATION = 48;
+      const PHASE_DURATION = TOTAL_DURATION / shapes.length;
+
+      function smoothStep(t) {
+        return t * t * (3 - 2 * t);
+      }
+
+      function resize() {
+        const { clientWidth, clientHeight } = canvas;
+        if (clientWidth === 0 || clientHeight === 0) return;
+        camera.aspect = clientWidth / clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(clientWidth, clientHeight, false);
+        composer.setSize(clientWidth, clientHeight);
+      }
+
+      function renderFrame() {
+        if (!running) return;
+        const elapsed = manualTime + clock.getElapsedTime();
+        tunnelMaterial.uniforms.uTime.value = elapsed;
+
+        const phaseIndex = Math.floor((elapsed % TOTAL_DURATION) / PHASE_DURATION);
+        const phaseProgress = ((elapsed % TOTAL_DURATION) % PHASE_DURATION) / PHASE_DURATION;
+        const nextIndex = (phaseIndex + 1) % shapes.length;
+        const mix = smoothStep(phaseProgress);
+
+        const palette = palettes[phaseIndex % palettes.length];
+        const nextPalette = palettes[nextIndex % palettes.length];
+        const lerpColor = new THREE.Color().lerpColors(
+          new THREE.Color(palette.color),
+          new THREE.Color(nextPalette.color),
+          mix
+        );
+        mainLight.color.copy(lerpColor);
+        bloomPass.strength = 1.4 + Math.sin(elapsed * 2.2) * 0.3 + mix * 0.3;
+
+        const zoomPulse = 12 + Math.sin(elapsed * 1.4) * 3 + Math.sin(phaseProgress * Math.PI) * 2;
+        camera.position.z = zoomPulse;
+        camera.position.y = 2 + Math.sin(elapsed * 0.6) * 0.8;
+        camera.lookAt(0, 0, -40);
+
+        shapes.forEach((shape, i) => {
+          shape.visible = i === phaseIndex || i === nextIndex;
+          const targetOpacity = i === phaseIndex ? 1 - mix : i === nextIndex ? mix : 0;
+          const material = shape.material;
+          material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, 0.25);
+          material.emissive.setHex(i === phaseIndex ? palette.secondary : nextPalette.secondary);
+
+          const baseScale = 1.0 + Math.sin(elapsed + i) * 0.15;
+          const morphScale = i === phaseIndex ? 1 + (1 - mix) * 0.4 : i === nextIndex ? 0.6 + mix * 0.8 : 0.2;
+          const finalScale = baseScale * morphScale;
+          shape.scale.setScalar(finalScale);
+
+          shape.rotation.x += 0.01 + i * 0.002;
+          shape.rotation.y += 0.013 + i * 0.0015;
+        });
+
+        stars.rotation.y = elapsed * 0.06;
+        stars.rotation.x = Math.sin(elapsed * 0.3) * 0.1;
+
+        composer.render();
+      }
+
+      function dispose() {
+        renderer.setAnimationLoop(null);
+        starGeometry.dispose();
+        starMaterial.dispose();
+        shapes.forEach((shape) => {
+          shape.geometry.dispose();
+          shape.material.dispose();
+        });
+        tunnelGeometry.dispose();
+        tunnelMaterial.dispose();
+        composer.dispose();
+        renderer.dispose();
+      }
+
+      return {
+        name: 'Morphing Showcase',
+        start() {
+          if (running) return;
+          running = true;
+          clock.start();
+          resize();
+          renderer.setAnimationLoop(renderFrame);
+        },
+        stop() {
+          running = false;
+          dispose();
+        },
+        resize,
+        seek(progress) {
+          const clamped = Math.min(Math.max(progress, 0), 1);
+          manualTime = clamped * TOTAL_DURATION;
+          clock.start();
+        },
+        getProgress() {
+          return ((manualTime + clock.getElapsedTime()) % TOTAL_DURATION) / TOTAL_DURATION;
+        },
+        duration: TOTAL_DURATION,
+      };
+    }
+
     const effects = [
       {
         id: 'cyber-tunnel',
@@ -1320,11 +1559,20 @@
         tags: ['WebGL', 'Bloom', 'Minimal'],
         factory: (canvas) => createPrismaticNebulaEffect(canvas, { showStars: false }),
       },
+      {
+        id: 'morphing-showcase',
+        name: 'Morphing Showcase',
+        description: 'A mega-mix reel that stitches all the previous elements together with dramatic zooms and morphs.',
+        tags: ['WebGL', 'Cinematic', 'Blend'],
+        factory: createMorphingShowcaseEffect,
+      },
     ];
 
     const gallery = document.getElementById('gallery');
     const stack = document.getElementById('canvas-stack');
     const counter = document.getElementById('active-count');
+    const primaryStage = document.getElementById('primary-stage');
+    const fullscreenBtn = document.getElementById('fullscreen-toggle');
     const orchestrator = new EffectOrchestrator(stack, counter);
 
     const player = new EffectPlayer({
@@ -1338,6 +1586,22 @@
     document.getElementById('next-effect').addEventListener('click', () => player.next());
     document.getElementById('prev-effect').addEventListener('click', () => player.prev());
     player.load(0);
+
+    function syncFullscreenButton() {
+      const isFullscreen = document.fullscreenElement === primaryStage;
+      fullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen';
+    }
+
+    fullscreenBtn.addEventListener('click', () => {
+      if (document.fullscreenElement === primaryStage) {
+        document.exitFullscreen();
+      } else {
+        primaryStage.requestFullscreen();
+      }
+    });
+
+    document.addEventListener('fullscreenchange', syncFullscreenButton);
+    syncFullscreenButton();
 
     effects.forEach((effect) => {
       const card = document.createElement('article');
