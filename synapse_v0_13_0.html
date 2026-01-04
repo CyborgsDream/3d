@@ -278,6 +278,18 @@
         const flashEl = document.getElementById('big-text');
         const barT = document.getElementById('bar-top');
         const barB = document.getElementById('bar-bottom');
+        const statusText = document.getElementById('status-text');
+        const sceneText = document.getElementById('scene-text');
+
+        const phaseConfigs = [
+            { status: 'SYS: CONVERGING', bg: 0x000000, bloom: 2.5, rgbBase: 0.005, rgbPulse: 0.12, tunnelOpacity: 0.08, tunnel: 0xffffff, grid: 0xff00ff, goWild: false },
+            { status: 'SYS: DISTORT', bg: 0x050012, bloom: 3.6, rgbBase: 0.012, rgbPulse: 0.18, tunnelOpacity: 0.15, tunnel: 0x00ffff, grid: 0x00ffff, goWild: true },
+            { status: 'SYS: BREACH', bg: 0x140000, bloom: 4.2, rgbBase: 0.02, rgbPulse: 0.25, tunnelOpacity: 0.22, tunnel: 0xff0044, grid: 0xff8800, goWild: true },
+            { status: 'SYS: STASIS', bg: 0x000611, bloom: 2.0, rgbBase: 0.004, rgbPulse: 0.08, tunnelOpacity: 0.05, tunnel: 0x2288ff, grid: 0x00aaff, goWild: false }
+        ];
+        let lastSegment = -1;
+        let rgbBase = 0.005;
+        let rgbPulse = 0.12;
         
         function flash(text) {
             flashEl.innerText = text || words[Math.floor(Math.random() * words.length)];
@@ -322,7 +334,6 @@
             ring2.rotation.z -= delta * 0.4; ring2.scale.setScalar(1 + bass * 0.5);
 
             warpTunnel.rotation.y += delta * 0.4;
-            warpTunnel.material.color.setHSL((elapsedSeconds * 0.1) % 1, 1, 0.5);
             
             gridB.position.z = (elapsedSeconds * 180) % 50;
             gridT.position.z = (elapsedSeconds * 180) % 50;
@@ -342,9 +353,8 @@
                 pArr[i+2] = x * Math.sin(angle) + z * Math.cos(angle);
             }
             vortex.geometry.attributes.position.needsUpdate = true;
-            
+
             rgbPass.uniforms.time.value = now * 0.001;
-            rgbPass.uniforms.amount.value = 0.005 + (bass * 0.12);
 
             if (standby) {
                 // Living Standby Mode
@@ -353,10 +363,33 @@
             } else if (running) {
                 // --- TIMELINE SEQUENCER (6s BLOCKS) ---
                 const segment = Math.floor(elapsedSeconds / 6);
-                document.getElementById('scene-text').innerText = "PHASE: " + segment.toString().padStart(2, '0');
+                sceneText.innerText = "PHASE: " + segment.toString().padStart(2, '0');
                 wildGlitchPass.enabled = false; barT.style.height = '0vh'; barB.style.height = '0vh'; camera.fov = 75;
 
+                if (segment !== lastSegment) {
+                    const phase = phaseConfigs[segment % phaseConfigs.length];
+                    scene.background = new THREE.Color(phase.bg);
+                    bloom.strength = phase.bloom;
+                    rgbBase = phase.rgbBase;
+                    rgbPulse = phase.rgbPulse;
+                    warpTunnel.material.opacity = phase.tunnelOpacity;
+                    warpTunnel.material.color.setHex(phase.tunnel);
+                    gridT.material.emissive.setHex(phase.grid);
+                    gridB.material.emissive.setHex(phase.grid);
+                    statusText.innerText = phase.status;
+                    lastSegment = segment;
+                }
+
+                const activePhase = phaseConfigs[(lastSegment >= 0 ? lastSegment : segment) % phaseConfigs.length];
+                warpTunnel.material.color.setHex(activePhase.tunnel);
+
                 // --- DIRECTOR CUTS (The 35s Effect Expanded) ---
+                if (activePhase.goWild && bass > 0.6) {
+                    wildGlitchPass.enabled = true;
+                    barT.style.height = '8vh';
+                    barB.style.height = '8vh';
+                }
+
                 if (bass > 0.82) {
                     const cuts = [
                         [0, 200, 0],   // Top
@@ -369,12 +402,17 @@
                     camera.lookAt(0,0,0);
                     camera.rotation.z = (Math.random()-0.5) * 1.5;
                     flash();
-                    wildGlitchPass.enabled = (Math.random() > 0.6);
+                    wildGlitchPass.enabled = activePhase.goWild || (Math.random() > 0.6);
                     barT.style.height = '15vh'; barB.style.height = '15vh';
                 }
 
                 // Dynamic FOV for high speed feel
                 if (segment % 3 === 0) camera.fov = 115;
+                
+                // Chromatic aberration and bloom pulse follow phase + bass
+                rgbPass.uniforms.amount.value = rgbBase + (bass * rgbPulse);
+                bloom.radius = 0.8 + (mid * 0.6);
+                bloom.threshold = 0.2 + (high * 0.1);
 
                 // EXIT LOGIC
                 if (elapsedSeconds > DURATION) {
