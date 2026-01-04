@@ -63,6 +63,88 @@
       box-shadow: var(--shadow);
     }
 
+    #primary-panel {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    #primary-meta h2 {
+      margin: 0 0 4px 0;
+    }
+
+    #primary-meta p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .player-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    #primary-stage {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #000;
+      min-height: 320px;
+      box-shadow: var(--shadow);
+    }
+
+    #primary-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      aspect-ratio: 16 / 9;
+    }
+
+    .primary-overlay {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.7));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+      pointer-events: none;
+    }
+
+    #primary-title {
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .timeline-row {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #timeline {
+      width: 100%;
+    }
+
+    #time-readout {
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: right;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
     #gallery {
       display: grid;
       gap: 12px;
@@ -157,6 +239,9 @@
 
     @media (max-width: 960px) {
       body { grid-template-columns: 1fr; }
+      #primary-panel {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -168,6 +253,29 @@
     </div>
     <button id="stop-all" class="btn" type="button">Stop All</button>
   </header>
+
+  <section class="panel" id="primary-panel">
+    <div id="primary-meta">
+      <div class="chip">Primary canvas</div>
+      <h2>Effect spotlight</h2>
+      <p>Browse every effect on a dedicated canvas with scrubbable timeline controls.</p>
+      <div class="player-controls">
+        <button class="btn" id="prev-effect" type="button">Previous</button>
+        <button class="btn" id="next-effect" type="button">Next</button>
+      </div>
+      <div class="timeline-row">
+        <input type="range" id="timeline" min="0" max="1" step="0.001" value="0" />
+        <div id="time-readout">0:00 / 0:00</div>
+      </div>
+    </div>
+    <div id="primary-stage">
+      <canvas id="primary-canvas"></canvas>
+      <div class="primary-overlay">
+        <span id="primary-title">—</span>
+        <span class="chip">Scrub or jump to any moment</span>
+      </div>
+    </div>
+  </section>
 
   <section class="panel" id="left">
     <h2 style="margin-top:0">Effects</h2>
@@ -253,6 +361,92 @@
 
       updateCounter() {
         this.counter.textContent = `${this.instances.size} running`;
+      }
+    }
+
+    /**
+     * Dedicated player for the spotlight canvas.
+     * It supports previous/next navigation and timeline scrubbing when the effect exposes hooks.
+     */
+    class EffectPlayer {
+      constructor({ canvas, titleEl, timeline, readout, effects, onIndexChange }) {
+        this.canvas = canvas;
+        this.titleEl = titleEl;
+        this.timeline = timeline;
+        this.readout = readout;
+        this.effects = effects;
+        this.onIndexChange = onIndexChange;
+        this.currentIndex = 0;
+        this.currentInstance = null;
+        this.animFrame = null;
+
+        this.timeline.addEventListener('input', (e) => this.seek(Number(e.target.value)));
+        window.addEventListener('resize', () => this.resize());
+      }
+
+      load(index) {
+        const normalized = ((index % this.effects.length) + this.effects.length) % this.effects.length;
+        this.currentIndex = normalized;
+        const def = this.effects[normalized];
+        this.stop();
+        this.titleEl.textContent = def.name;
+        this.currentInstance = def.factory(this.canvas);
+        this.currentInstance.start();
+        this.timeline.disabled = typeof this.currentInstance.seek !== 'function';
+        if (typeof this.onIndexChange === 'function') this.onIndexChange(normalized);
+        this.tick();
+        this.resize();
+      }
+
+      formatTime(progress, duration) {
+        const totalSeconds = Math.max(0, Math.round(progress * duration));
+        const minutes = Math.floor(totalSeconds / 60).toString();
+        const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+        const totalMinutes = Math.floor(duration / 60).toString();
+        const totalSecondsPart = Math.round(duration % 60).toString().padStart(2, '0');
+        return `${minutes}:${seconds} / ${totalMinutes}:${totalSecondsPart}`;
+      }
+
+      tick() {
+        cancelAnimationFrame(this.animFrame);
+        const step = () => {
+          if (this.currentInstance && typeof this.currentInstance.getProgress === 'function') {
+            const progress = Math.min(Math.max(this.currentInstance.getProgress(), 0), 1);
+            this.timeline.value = progress;
+            const duration = this.currentInstance.duration || 180;
+            this.readout.textContent = this.formatTime(progress, duration);
+          }
+          this.animFrame = requestAnimationFrame(step);
+        };
+        this.animFrame = requestAnimationFrame(step);
+      }
+
+      seek(progress) {
+        if (!this.currentInstance || typeof this.currentInstance.seek !== 'function') return;
+        const clamped = Math.min(Math.max(progress, 0), 1);
+        this.currentInstance.seek(clamped);
+      }
+
+      next() {
+        this.load(this.currentIndex + 1);
+      }
+
+      prev() {
+        this.load(this.currentIndex - 1);
+      }
+
+      resize() {
+        if (this.currentInstance && typeof this.currentInstance.resize === 'function') {
+          this.currentInstance.resize();
+        }
+      }
+
+      stop() {
+        cancelAnimationFrame(this.animFrame);
+        if (this.currentInstance && typeof this.currentInstance.stop === 'function') {
+          this.currentInstance.stop();
+        }
+        this.currentInstance = null;
       }
     }
 
@@ -369,9 +563,10 @@
       ];
       let currentPalette = 0;
 
-      const BPM = 128;
-      const clock = new THREE.Clock();
-      let running = false;
+        const BPM = 128;
+        const clock = new THREE.Clock();
+        let running = false;
+        let manualTime = 0;
 
       function resize() {
         const { clientWidth, clientHeight } = canvas;
@@ -385,7 +580,7 @@
 
       function renderFrame() {
         if (!running) return;
-        const time = clock.getElapsedTime();
+        const time = manualTime + clock.getElapsedTime();
         const beatDuration = 60 / BPM;
         const beatFrac = (time % beatDuration) / beatDuration;
         const beatHit = Math.pow(1.0 - beatFrac, 3.0);
@@ -464,6 +659,14 @@
           dispose();
         },
         resize,
+        seek(progress) {
+          manualTime = Math.max(progress, 0) * 120;
+          clock.start();
+        },
+        getProgress() {
+          return ((manualTime + clock.getElapsedTime()) % 120) / 120;
+        },
+        duration: 120,
       };
     }
 
@@ -871,6 +1074,15 @@
           dispose();
         },
         resize,
+        seek(progress) {
+          const clamped = Math.min(Math.max(progress, 0), 1);
+          currentTime = clamped * DURATION_SECONDS;
+          clock.elapsedTime = 0;
+        },
+        getProgress() {
+          return currentTime / DURATION_SECONDS;
+        },
+        duration: DURATION_SECONDS,
       };
     }
 
@@ -970,7 +1182,7 @@
 
       function renderFrame() {
         if (!running) return;
-        const elapsed = clock.getElapsedTime();
+        const elapsed = manualTime + clock.getElapsedTime();
 
         if (stars) {
           stars.rotation.y = elapsed * 0.02;
@@ -1033,6 +1245,14 @@
           dispose();
         },
         resize,
+        seek(progress) {
+          manualTime = Math.max(progress, 0) * 150;
+          clock.start();
+        },
+        getProgress() {
+          return ((manualTime + clock.getElapsedTime()) % 150) / 150;
+        },
+        duration: 150,
       };
     }
 
@@ -1106,6 +1326,18 @@
     const stack = document.getElementById('canvas-stack');
     const counter = document.getElementById('active-count');
     const orchestrator = new EffectOrchestrator(stack, counter);
+
+    const player = new EffectPlayer({
+      canvas: document.getElementById('primary-canvas'),
+      titleEl: document.getElementById('primary-title'),
+      timeline: document.getElementById('timeline'),
+      readout: document.getElementById('time-readout'),
+      effects,
+    });
+
+    document.getElementById('next-effect').addEventListener('click', () => player.next());
+    document.getElementById('prev-effect').addEventListener('click', () => player.prev());
+    player.load(0);
 
     effects.forEach((effect) => {
       const card = document.createElement('article');
