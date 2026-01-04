@@ -156,21 +156,36 @@
     #gallery {
       display: grid;
       gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
 
     .card {
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 14px;
+      padding: 12px;
       background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.0)),
         rgba(255, 255, 255, 0.01);
-      display: flex;
-      flex-direction: column;
+      display: grid;
       gap: 10px;
     }
 
     .card h3 { margin: 0; font-size: 1rem; }
-    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    .thumb {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 16 / 9;
+      box-shadow: var(--shadow);
+    }
+
+    .thumb canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
     .tag-row {
       display: flex;
@@ -1603,13 +1618,19 @@
     document.addEventListener('fullscreenchange', syncFullscreenButton);
     syncFullscreenButton();
 
+    const previewResizers = [];
+
     effects.forEach((effect) => {
       const card = document.createElement('article');
       card.className = 'card';
+
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      const previewCanvas = document.createElement('canvas');
+      thumb.append(previewCanvas);
+
       const title = document.createElement('h3');
       title.textContent = effect.name;
-      const desc = document.createElement('p');
-      desc.textContent = effect.description;
       const tags = document.createElement('div');
       tags.className = 'tag-row';
       effect.tags.forEach((t) => {
@@ -1625,8 +1646,22 @@
       button.textContent = 'Launch in mix';
       button.addEventListener('click', () => orchestrator.add(effect));
 
-      card.append(title, desc, tags, button);
+      card.append(thumb, title, tags, button);
       gallery.append(card);
+
+      const previewInstance = effect.factory(previewCanvas);
+      if (previewInstance && typeof previewInstance.start === 'function') previewInstance.start();
+      const resizePreview = () => {
+        if (previewInstance && typeof previewInstance.resize === 'function') {
+          previewInstance.resize();
+        }
+      };
+      resizePreview();
+      previewResizers.push(resizePreview);
+    });
+
+    window.addEventListener('resize', () => {
+      previewResizers.forEach((fn) => fn());
     });
 
     document.getElementById('stop-all').addEventListener('click', () => orchestrator.stopAll());
