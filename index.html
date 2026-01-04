@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebGPU / WebGL Effect Gallery</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #02030a;
+      --panel: #0b1024;
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #4cf3ff;
+      --accent-2: #ff4fd8;
+      --text: #eef3ff;
+      --muted: #90a2c8;
+      --radius: 14px;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(76, 243, 255, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 0%, rgba(255, 79, 216, 0.08), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      padding: clamp(16px, 3vw, 32px);
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: clamp(16px, 3vw, 32px);
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: clamp(1.2rem, 2vw, 1.6rem);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    #gallery {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.0)),
+        rgba(255, 255, 255, 0.01);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card h3 { margin: 0; font-size: 1rem; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .tag {
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(76, 243, 255, 0.12), rgba(255, 79, 216, 0.12));
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+    .btn:active { transform: translateY(0); box-shadow: none; }
+
+    #canvas-stack {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      align-content: start;
+    }
+
+    .instance {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #000;
+      min-height: 240px;
+    }
+
+    .instance header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.65), transparent);
+      color: #fff;
+      z-index: 2;
+      font-size: 0.9rem;
+    }
+
+    .instance canvas { width: 100%; height: 100%; display: block; }
+
+    .chip {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    @media (max-width: 960px) {
+      body { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>WebGPU / WebGL Effect Gallery</h1>
+      <div class="meta">Modular scene snippets you can launch standalone or mix on the same page.</div>
+    </div>
+    <button id="stop-all" class="btn" type="button">Stop All</button>
+  </header>
+
+  <section class="panel" id="left">
+    <h2 style="margin-top:0">Effects</h2>
+    <div id="gallery"></div>
+  </section>
+
+  <section class="panel" id="right">
+    <div class="controls" style="justify-content: space-between; margin-bottom: 8px;">
+      <span class="chip">Active mix (independent canvases)</span>
+      <span class="chip" id="active-count">0 running</span>
+    </div>
+    <div id="canvas-stack"></div>
+  </section>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { GlitchPass } from 'three/addons/postprocessing/GlitchPass.js';
+
+    /**
+     * Generic orchestrator that mounts effect instances into cards.
+     */
+    class EffectOrchestrator {
+      constructor(container, counter) {
+        this.container = container;
+        this.counter = counter;
+        this.instances = new Set();
+        window.addEventListener('resize', () => this.resizeAll());
+      }
+
+      add(effectDef) {
+        const wrapper = document.createElement('article');
+        wrapper.className = 'instance';
+
+        const header = document.createElement('header');
+        const title = document.createElement('span');
+        title.textContent = effectDef.name;
+        const close = document.createElement('button');
+        close.textContent = 'Stop';
+        close.className = 'btn';
+        close.style.padding = '6px 10px';
+        close.style.fontSize = '0.9rem';
+        header.append(title, close);
+
+        const canvas = document.createElement('canvas');
+        wrapper.append(header, canvas);
+        this.container.append(wrapper);
+
+        const effect = effectDef.factory(canvas);
+        effect.start();
+
+        const instance = { wrapper, effect };
+        close.addEventListener('click', () => this.remove(instance));
+        this.instances.add(instance);
+        this.updateCounter();
+      }
+
+      remove(instance) {
+        if (!this.instances.has(instance)) return;
+        instance.effect.stop();
+        instance.wrapper.remove();
+        this.instances.delete(instance);
+        this.updateCounter();
+      }
+
+      stopAll() {
+        [...this.instances].forEach((inst) => this.remove(inst));
+      }
+
+      resizeAll() {
+        this.instances.forEach(({ effect }) => effect.resize());
+      }
+
+      updateCounter() {
+        this.counter.textContent = `${this.instances.size} running`;
+      }
+    }
+
+    /**
+     * Effect: Cyber Tunnel (extracted from demoscene_visualizer-v0_0_2.html)
+     * A post-processed cylinder tunnel with a morphing totem and palette shifts.
+     */
+    function createCyberTunnelEffect(canvas) {
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 1);
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.002);
+
+      const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1500);
+      camera.position.z = 5;
+
+      const tunnelGeometry = new THREE.CylinderGeometry(30, 30, 1000, 32, 20, true);
+      tunnelGeometry.rotateX(-Math.PI / 2);
+
+      const vertexShader = /* glsl */`
+        varying vec2 vUv;
+        varying vec3 vPos;
+        uniform float uTime;
+        void main() {
+          vUv = uv;
+          vPos = position;
+          vec3 pos = position;
+          float twist = sin(pos.z * 0.1 + uTime * 0.5) * 5.0;
+          pos.x += cos(pos.z * 0.05 + uTime) * 10.0;
+          pos.y += sin(pos.z * 0.05 + uTime) * 10.0;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+        }
+      `;
+
+      const fragmentShader = /* glsl */`
+        varying vec2 vUv;
+        varying vec3 vPos;
+        uniform float uTime;
+        uniform vec3 uColor1;
+        uniform vec3 uColor2;
+        uniform float uBeat;
+        void main() {
+          float gridX = step(0.95, fract(vUv.x * 20.0 + uTime * 0.2));
+          float gridY = step(0.95, fract(vUv.y * 4.0));
+          float lightPulse = sin(vUv.y * 20.0 - uTime * 5.0);
+          lightPulse = smoothstep(0.8, 1.0, lightPulse);
+          float fog = smoothstep(200.0, 50.0, abs(vPos.z));
+          vec3 baseColor = mix(uColor1, uColor2, sin(vUv.x * 3.14 + uTime));
+          vec3 finalColor = baseColor * (gridX + gridY * 0.5);
+          finalColor += uColor2 * lightPulse * uBeat * 2.0;
+          gl_FragColor = vec4(finalColor, fog);
+        }
+      `;
+
+      const tunnelMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor1: { value: new THREE.Color(0x00ffff) },
+          uColor2: { value: new THREE.Color(0xff00ff) },
+          uBeat: { value: 0 },
+        },
+        vertexShader,
+        fragmentShader,
+        side: THREE.DoubleSide,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
+      scene.add(tunnel);
+
+      const totemGeo = new THREE.IcosahedronGeometry(8, 2);
+      const wireframeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
+      const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const totem = new THREE.Mesh(totemGeo, wireframeMat);
+      const totemCore = new THREE.Mesh(new THREE.IcosahedronGeometry(6, 0), glowMat);
+      totem.add(totemCore);
+      totem.position.z = -100;
+      scene.add(totem);
+
+      const composer = new EffectComposer(renderer);
+      const renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
+
+      const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.5, 0.4, 0.85);
+      bloomPass.threshold = 0;
+      bloomPass.strength = 2.0;
+      bloomPass.radius = 0.5;
+      composer.addPass(bloomPass);
+
+      const glitchPass = new GlitchPass();
+      glitchPass.goWild = false;
+      glitchPass.enabled = false;
+      composer.addPass(glitchPass);
+
+      const palettes = [
+        { c1: 0x00aaff, c2: 0xff00aa },
+        { c1: 0x00ff00, c2: 0xffaa00 },
+        { c1: 0xff0044, c2: 0xaa00ff },
+      ];
+      let currentPalette = 0;
+
+      const BPM = 128;
+      const clock = new THREE.Clock();
+      let running = false;
+
+      function resize() {
+        const { clientWidth, clientHeight } = canvas;
+        if (clientWidth === 0 || clientHeight === 0) return;
+        camera.aspect = clientWidth / clientHeight;
+        camera.fov = clientHeight > clientWidth ? 90 : 75;
+        camera.updateProjectionMatrix();
+        renderer.setSize(clientWidth, clientHeight, false);
+        composer.setSize(clientWidth, clientHeight);
+      }
+
+      function renderFrame() {
+        if (!running) return;
+        const time = clock.getElapsedTime();
+        const beatDuration = 60 / BPM;
+        const beatFrac = (time % beatDuration) / beatDuration;
+        const beatHit = Math.pow(1.0 - beatFrac, 3.0);
+
+        tunnelMaterial.uniforms.uTime.value = time;
+        tunnelMaterial.uniforms.uBeat.value = beatHit;
+
+        camera.position.z = 5 - time * 20;
+        if (camera.position.z < tunnel.position.z - 500) {
+          tunnel.position.z = camera.position.z - 500;
+        }
+        camera.position.x = Math.sin(time * 0.5) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
+        camera.position.y = Math.cos(time * 0.3) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
+
+        totem.position.z = camera.position.z - 80;
+        totem.rotation.x += 0.01;
+        totem.rotation.y += 0.02 + beatHit * 0.1;
+        totem.scale.setScalar(1 + beatHit * 0.3);
+
+        const phase = Math.floor(time / 20) % palettes.length;
+        if (phase !== currentPalette) {
+          currentPalette = phase;
+          glitchPass.enabled = true;
+          setTimeout(() => (glitchPass.enabled = false), 400);
+        }
+
+        const col1 = new THREE.Color(palettes[currentPalette].c1);
+        const col2 = new THREE.Color(palettes[currentPalette].c2);
+        const mixCol = col1.clone().lerp(col2, Math.sin(time) * 0.5 + 0.5);
+        totemCore.material.color = mixCol;
+        totem.material.color = col2;
+        tunnelMaterial.uniforms.uColor1.value.lerp(col1, 0.02);
+        tunnelMaterial.uniforms.uColor2.value.lerp(col2, 0.02);
+
+        composer.render();
+      }
+
+      function dispose() {
+        renderer.setAnimationLoop(null);
+        tunnelGeometry.dispose();
+        tunnelMaterial.dispose();
+        totemGeo.dispose();
+        wireframeMat.dispose();
+        glowMat.dispose();
+        composer.dispose();
+        renderer.dispose();
+      }
+
+      return {
+        name: 'Cyber Tunnel',
+        start() {
+          if (running) return;
+          running = true;
+          clock.start();
+          resize();
+          renderer.setAnimationLoop(renderFrame);
+        },
+        stop() {
+          running = false;
+          dispose();
+        },
+        resize,
+      };
+    }
+
+    const effects = [
+      {
+        id: 'cyber-tunnel',
+        name: 'Cyber Tunnel',
+        description: 'Warping grid tunnel with bloom, glitch hits, and a rotating totem lifted from the demoscene visualizer.',
+        tags: ['WebGL', 'PostFX', 'Procedural'],
+        factory: createCyberTunnelEffect,
+      },
+    ];
+
+    const gallery = document.getElementById('gallery');
+    const stack = document.getElementById('canvas-stack');
+    const counter = document.getElementById('active-count');
+    const orchestrator = new EffectOrchestrator(stack, counter);
+
+    effects.forEach((effect) => {
+      const card = document.createElement('article');
+      card.className = 'card';
+      const title = document.createElement('h3');
+      title.textContent = effect.name;
+      const desc = document.createElement('p');
+      desc.textContent = effect.description;
+      const tags = document.createElement('div');
+      tags.className = 'tag-row';
+      effect.tags.forEach((t) => {
+        const chip = document.createElement('span');
+        chip.className = 'tag';
+        chip.textContent = t;
+        tags.append(chip);
+      });
+
+      const button = document.createElement('button');
+      button.className = 'btn';
+      button.type = 'button';
+      button.textContent = 'Launch in mix';
+      button.addEventListener('click', () => orchestrator.add(effect));
+
+      card.append(title, desc, tags, button);
+      gallery.append(card);
+    });
+
+    document.getElementById('stop-all').addEventListener('click', () => orchestrator.stopAll());
+  </script>
+</body>
+</html>
