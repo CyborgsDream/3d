@@ -260,7 +260,11 @@
      * Effect: Cyber Tunnel (extracted from demoscene_visualizer-v0_0_2.html)
      * A post-processed cylinder tunnel with a morphing totem and palette shifts.
      */
-    function createCyberTunnelEffect(canvas) {
+    function createCyberTunnelEffect(canvas, options = {}) {
+      const enableTunnel = options.enableTunnel !== false;
+      const enableTotem = options.enableTotem !== false;
+      const enableGlitch = options.enableGlitch !== false;
+
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0x000000, 1);
@@ -271,8 +275,8 @@
       const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1500);
       camera.position.z = 5;
 
-      const tunnelGeometry = new THREE.CylinderGeometry(30, 30, 1000, 32, 20, true);
-      tunnelGeometry.rotateX(-Math.PI / 2);
+      const tunnelGeometry = enableTunnel ? new THREE.CylinderGeometry(30, 30, 1000, 32, 20, true) : null;
+      if (tunnelGeometry) tunnelGeometry.rotateX(-Math.PI / 2);
 
       const vertexShader = /* glsl */`
         varying vec2 vUv;
@@ -309,31 +313,37 @@
         }
       `;
 
-      const tunnelMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uColor1: { value: new THREE.Color(0x00ffff) },
-          uColor2: { value: new THREE.Color(0xff00ff) },
-          uBeat: { value: 0 },
-        },
-        vertexShader,
-        fragmentShader,
-        side: THREE.DoubleSide,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-      });
+      const tunnelMaterial = enableTunnel
+        ? new THREE.ShaderMaterial({
+            uniforms: {
+              uTime: { value: 0 },
+              uColor1: { value: new THREE.Color(0x00ffff) },
+              uColor2: { value: new THREE.Color(0xff00ff) },
+              uBeat: { value: 0 },
+            },
+            vertexShader,
+            fragmentShader,
+            side: THREE.DoubleSide,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+          })
+        : null;
 
-      const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
-      scene.add(tunnel);
+      const tunnel = enableTunnel ? new THREE.Mesh(tunnelGeometry, tunnelMaterial) : null;
+      if (tunnel) scene.add(tunnel);
 
-      const totemGeo = new THREE.IcosahedronGeometry(8, 2);
-      const wireframeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 });
-      const glowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const totem = new THREE.Mesh(totemGeo, wireframeMat);
-      const totemCore = new THREE.Mesh(new THREE.IcosahedronGeometry(6, 0), glowMat);
-      totem.add(totemCore);
-      totem.position.z = -100;
-      scene.add(totem);
+      const totemGeo = enableTotem ? new THREE.IcosahedronGeometry(8, 2) : null;
+      const wireframeMat = enableTotem
+        ? new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.5 })
+        : null;
+      const glowMat = enableTotem ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : null;
+      const totem = enableTotem ? new THREE.Mesh(totemGeo, wireframeMat) : null;
+      const totemCore = enableTotem ? new THREE.Mesh(new THREE.IcosahedronGeometry(6, 0), glowMat) : null;
+      if (totem && totemCore) {
+        totem.add(totemCore);
+        totem.position.z = -100;
+        scene.add(totem);
+      }
 
       const composer = new EffectComposer(renderer);
       const renderPass = new RenderPass(scene, camera);
@@ -345,10 +355,12 @@
       bloomPass.radius = 0.5;
       composer.addPass(bloomPass);
 
-      const glitchPass = new GlitchPass();
-      glitchPass.goWild = false;
-      glitchPass.enabled = false;
-      composer.addPass(glitchPass);
+      const glitchPass = enableGlitch ? new GlitchPass() : null;
+      if (glitchPass) {
+        glitchPass.goWild = false;
+        glitchPass.enabled = false;
+        composer.addPass(glitchPass);
+      }
 
       const palettes = [
         { c1: 0x00aaff, c2: 0xff00aa },
@@ -378,46 +390,62 @@
         const beatFrac = (time % beatDuration) / beatDuration;
         const beatHit = Math.pow(1.0 - beatFrac, 3.0);
 
-        tunnelMaterial.uniforms.uTime.value = time;
-        tunnelMaterial.uniforms.uBeat.value = beatHit;
+        if (enableTunnel && tunnelMaterial) {
+          tunnelMaterial.uniforms.uTime.value = time;
+          tunnelMaterial.uniforms.uBeat.value = beatHit;
 
-        camera.position.z = 5 - time * 20;
-        if (camera.position.z < tunnel.position.z - 500) {
-          tunnel.position.z = camera.position.z - 500;
+          camera.position.z = 5 - time * 20;
+          if (tunnel && camera.position.z < tunnel.position.z - 500) {
+            tunnel.position.z = camera.position.z - 500;
+          }
+          camera.position.x = Math.sin(time * 0.5) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
+          camera.position.y = Math.cos(time * 0.3) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
+        } else {
+          camera.position.set(Math.sin(time * 0.3) * 6, Math.cos(time * 0.25) * 4, 18 + Math.sin(time * 0.2) * 4);
+          camera.lookAt(0, 0, 0);
         }
-        camera.position.x = Math.sin(time * 0.5) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
-        camera.position.y = Math.cos(time * 0.3) * 2 + (Math.random() - 0.5) * beatHit * 0.5;
 
-        totem.position.z = camera.position.z - 80;
-        totem.rotation.x += 0.01;
-        totem.rotation.y += 0.02 + beatHit * 0.1;
-        totem.scale.setScalar(1 + beatHit * 0.3);
+        if (enableTotem && totem) {
+          totem.position.z = enableTunnel ? camera.position.z - 80 : 0;
+          totem.rotation.x += 0.01;
+          totem.rotation.y += 0.02 + beatHit * 0.1;
+          totem.scale.setScalar(1 + beatHit * 0.3);
+        }
 
         const phase = Math.floor(time / 20) % palettes.length;
-        if (phase !== currentPalette) {
+        if (phase !== currentPalette && glitchPass) {
           currentPalette = phase;
           glitchPass.enabled = true;
           setTimeout(() => (glitchPass.enabled = false), 400);
+        } else if (phase !== currentPalette) {
+          currentPalette = phase;
         }
 
-        const col1 = new THREE.Color(palettes[currentPalette].c1);
-        const col2 = new THREE.Color(palettes[currentPalette].c2);
-        const mixCol = col1.clone().lerp(col2, Math.sin(time) * 0.5 + 0.5);
-        totemCore.material.color = mixCol;
-        totem.material.color = col2;
-        tunnelMaterial.uniforms.uColor1.value.lerp(col1, 0.02);
-        tunnelMaterial.uniforms.uColor2.value.lerp(col2, 0.02);
+        if (enableTotem && totemCore && totem) {
+          const col1 = new THREE.Color(palettes[currentPalette].c1);
+          const col2 = new THREE.Color(palettes[currentPalette].c2);
+          const mixCol = col1.clone().lerp(col2, Math.sin(time) * 0.5 + 0.5);
+          totemCore.material.color = mixCol;
+          totem.material.color = col2;
+          if (tunnelMaterial) {
+            tunnelMaterial.uniforms.uColor1.value.lerp(col1, 0.02);
+            tunnelMaterial.uniforms.uColor2.value.lerp(col2, 0.02);
+          }
+        }
 
         composer.render();
       }
 
       function dispose() {
         renderer.setAnimationLoop(null);
-        tunnelGeometry.dispose();
-        tunnelMaterial.dispose();
-        totemGeo.dispose();
-        wireframeMat.dispose();
-        glowMat.dispose();
+        if (tunnelGeometry) tunnelGeometry.dispose();
+        if (tunnelMaterial) tunnelMaterial.dispose();
+        if (totemGeo) totemGeo.dispose();
+        if (wireframeMat) wireframeMat.dispose();
+        if (glowMat) glowMat.dispose();
+        if (totemCore) totemCore.geometry.dispose();
+        if (totemCore && totemCore.material) totemCore.material.dispose();
+        if (totem && totem.material) totem.material.dispose();
         composer.dispose();
         renderer.dispose();
       }
@@ -443,7 +471,11 @@
      * Effect: CYBERNOID Deep Dive (extracted from demoscene_visualizer-v0_0_3.html)
      * Three morphing holograms inside a warped tunnel with palette changes and glitch pulses.
      */
-    function createCybernoidDeepDiveEffect(canvas) {
+    function createCybernoidDeepDiveEffect(canvas, options = {}) {
+      const showTunnel = options.showTunnel !== false;
+      const showHolograms = options.showHolograms !== false;
+      const enableGlitch = options.enableGlitch !== false;
+
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0x000000, 1);
@@ -454,8 +486,8 @@
       const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 2000);
       camera.position.z = 20;
 
-      const tunnelGeometry = new THREE.CylinderGeometry(50, 50, 1500, 64, 40, true);
-      tunnelGeometry.rotateX(-Math.PI / 2);
+      const tunnelGeometry = showTunnel ? new THREE.CylinderGeometry(50, 50, 1500, 64, 40, true) : null;
+      if (tunnelGeometry) tunnelGeometry.rotateX(-Math.PI / 2);
 
       const tunnelVertex = /* glsl */ `
         varying vec2 vUv;
@@ -595,23 +627,25 @@
         }
       `;
 
-      const tunnelMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uColor1: { value: new THREE.Color(0x00ffff) },
-          uColor2: { value: new THREE.Color(0xff00ff) },
-          uBeat: { value: 0 },
-        },
-        vertexShader: tunnelVertex,
-        fragmentShader: tunnelFragment,
-        side: THREE.DoubleSide,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
+      const tunnelMaterial = showTunnel
+        ? new THREE.ShaderMaterial({
+            uniforms: {
+              uTime: { value: 0 },
+              uColor1: { value: new THREE.Color(0x00ffff) },
+              uColor2: { value: new THREE.Color(0xff00ff) },
+              uBeat: { value: 0 },
+            },
+            vertexShader: tunnelVertex,
+            fragmentShader: tunnelFragment,
+            side: THREE.DoubleSide,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+          })
+        : null;
 
-      const tunnel = new THREE.Mesh(tunnelGeometry, tunnelMaterial);
-      scene.add(tunnel);
+      const tunnel = showTunnel ? new THREE.Mesh(tunnelGeometry, tunnelMaterial) : null;
+      if (tunnel) scene.add(tunnel);
 
       const holoMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -630,7 +664,7 @@
       const shape1 = new THREE.Mesh(new THREE.TorusKnotGeometry(12, 3, 200, 32), holoMaterial.clone());
       const shape2 = new THREE.Mesh(new THREE.IcosahedronGeometry(18, 3), holoMaterial.clone());
       const shape3 = new THREE.Mesh(new THREE.BoxGeometry(25, 25, 25, 20, 20, 20), holoMaterial.clone());
-      const shapes = [shape1, shape2, shape3];
+      const shapes = showHolograms ? [shape1, shape2, shape3] : [];
 
       shapes.forEach((s) => {
         s.position.z = -30;
@@ -638,8 +672,10 @@
         scene.add(s);
       });
 
-      shape1.scale.setScalar(1);
-      shape1.material.uniforms.uOpacity.value = 1;
+      if (showHolograms) {
+        shape1.scale.setScalar(1);
+        shape1.material.uniforms.uOpacity.value = 1;
+      }
 
       const composer = new EffectComposer(renderer);
       const renderPass = new RenderPass(scene, camera);
@@ -651,10 +687,12 @@
       bloomPass.radius = 0.8;
       composer.addPass(bloomPass);
 
-      const glitchPass = new GlitchPass();
-      glitchPass.goWild = false;
-      glitchPass.enabled = false;
-      composer.addPass(glitchPass);
+      const glitchPass = enableGlitch ? new GlitchPass() : null;
+      if (glitchPass) {
+        glitchPass.goWild = false;
+        glitchPass.enabled = false;
+        composer.addPass(glitchPass);
+      }
 
       let glitchTimeoutId = null;
 
@@ -698,12 +736,14 @@
         const x = e.clientX - rect.left;
         const pct = Math.max(0, Math.min(1, x / rect.width));
         currentTime = pct * DURATION_SECONDS;
-        glitchPass.enabled = true;
-        if (glitchTimeoutId) clearTimeout(glitchTimeoutId);
-        glitchTimeoutId = setTimeout(() => {
-          glitchPass.enabled = false;
-          glitchTimeoutId = null;
-        }, 200);
+        if (glitchPass) {
+          glitchPass.enabled = true;
+          if (glitchTimeoutId) clearTimeout(glitchTimeoutId);
+          glitchTimeoutId = setTimeout(() => {
+            glitchPass.enabled = false;
+            glitchTimeoutId = null;
+          }, 200);
+        }
       }
 
       function renderFrame() {
@@ -724,59 +764,70 @@
         const phaseProgress = (currentTime % phaseDuration) / phaseDuration;
         const transitionStart = 0.85;
 
-        shapes.forEach((s, i) => {
-          s.rotation.x += 0.005 + beatHit * 0.01;
-          s.rotation.y += 0.01 + beatHit * 0.01;
-          s.rotation.x += (pointerY * 0.5 - s.rotation.x) * 0.05;
-          s.rotation.y += (pointerX * 0.5 - s.rotation.y) * 0.05;
-
-          s.material.uniforms.uColor.value.set(palettes[currentPhase].c2);
-          nextPhaseColor.set(palettes[nextPhase].c1);
-          s.material.uniforms.uColor.value.lerp(
-            nextPhaseColor,
-            phaseProgress > 0.5 ? (phaseProgress - 0.5) * 2 : 0,
-          );
-          s.material.uniforms.uTime.value = currentTime;
-        });
-
-        if (phaseProgress > transitionStart) {
-          const transitionFactor = (phaseProgress - transitionStart) / (1.0 - transitionStart);
-          shapes[currentPhase].scale.setScalar(1.0 + transitionFactor * 2.0);
-          shapes[currentPhase].material.uniforms.uOpacity.value = 1.0 - transitionFactor;
-          shapes[currentPhase].material.uniforms.uDisplace.value = transitionFactor;
-
-          shapes[nextPhase].scale.setScalar(0.1 + transitionFactor * 0.9);
-          shapes[nextPhase].material.uniforms.uOpacity.value = transitionFactor;
-          shapes[nextPhase].material.uniforms.uDisplace.value = 1.0 - transitionFactor;
-        } else {
+        if (showHolograms) {
           shapes.forEach((s, i) => {
-            if (i === currentPhase) {
-              s.scale.setScalar(1.0 + beatHit * 0.05);
-              s.material.uniforms.uOpacity.value = 1.0;
-              s.material.uniforms.uDisplace.value = 0.0;
-            } else {
-              s.scale.setScalar(0.001);
-              s.material.uniforms.uOpacity.value = 0.0;
-            }
+            s.rotation.x += 0.005 + beatHit * 0.01;
+            s.rotation.y += 0.01 + beatHit * 0.01;
+            s.rotation.x += (pointerY * 0.5 - s.rotation.x) * 0.05;
+            s.rotation.y += (pointerX * 0.5 - s.rotation.y) * 0.05;
+
+            s.material.uniforms.uColor.value.set(palettes[currentPhase].c2);
+            nextPhaseColor.set(palettes[nextPhase].c1);
+            s.material.uniforms.uColor.value.lerp(
+              nextPhaseColor,
+              phaseProgress > 0.5 ? (phaseProgress - 0.5) * 2 : 0,
+            );
+            s.material.uniforms.uTime.value = currentTime;
           });
+
+          if (phaseProgress > transitionStart) {
+            const transitionFactor = (phaseProgress - transitionStart) / (1.0 - transitionStart);
+            shapes[currentPhase].scale.setScalar(1.0 + transitionFactor * 2.0);
+            shapes[currentPhase].material.uniforms.uOpacity.value = 1.0 - transitionFactor;
+            shapes[currentPhase].material.uniforms.uDisplace.value = transitionFactor;
+
+            shapes[nextPhase].scale.setScalar(0.1 + transitionFactor * 0.9);
+            shapes[nextPhase].material.uniforms.uOpacity.value = transitionFactor;
+            shapes[nextPhase].material.uniforms.uDisplace.value = 1.0 - transitionFactor;
+          } else {
+            shapes.forEach((s, i) => {
+              if (i === currentPhase) {
+                s.scale.setScalar(1.0 + beatHit * 0.05);
+                s.material.uniforms.uOpacity.value = 1.0;
+                s.material.uniforms.uDisplace.value = 0.0;
+              } else {
+                s.scale.setScalar(0.001);
+                s.material.uniforms.uOpacity.value = 0.0;
+              }
+            });
+          }
         }
 
-        tunnelMaterial.uniforms.uTime.value = currentTime;
-        tunnelMaterial.uniforms.uBeat.value = beatHit;
-        const p1 = palettes[currentPhase];
-        tunnelColor1.set(p1.c1);
-        tunnelColor2.set(p1.c2);
-        tunnelMaterial.uniforms.uColor1.value.lerp(tunnelColor1, 0.05);
-        tunnelMaterial.uniforms.uColor2.value.lerp(tunnelColor2, 0.05);
-
-        camera.position.z = 20 - totalProgress * 30 * (DURATION_SECONDS / phaseDuration);
-        if (camera.position.z < tunnel.position.z - 500) {
-          tunnel.position.z = camera.position.z - 500;
+        if (showTunnel && tunnelMaterial) {
+          tunnelMaterial.uniforms.uTime.value = currentTime;
+          tunnelMaterial.uniforms.uBeat.value = beatHit;
+          const p1 = palettes[currentPhase];
+          tunnelColor1.set(p1.c1);
+          tunnelColor2.set(p1.c2);
+          tunnelMaterial.uniforms.uColor1.value.lerp(tunnelColor1, 0.05);
+          tunnelMaterial.uniforms.uColor2.value.lerp(tunnelColor2, 0.05);
         }
 
-        shapes.forEach((s) => {
-          s.position.z = camera.position.z - 40;
-        });
+        if (showTunnel) {
+          camera.position.z = 20 - totalProgress * 30 * (DURATION_SECONDS / phaseDuration);
+          if (tunnel && camera.position.z < tunnel.position.z - 500) {
+            tunnel.position.z = camera.position.z - 500;
+          }
+        }
+
+        if (showHolograms) {
+          shapes.forEach((s) => {
+            s.position.z = camera.position.z - 40;
+          });
+        } else {
+          camera.position.set(Math.sin(currentTime * 0.2) * 12, Math.cos(currentTime * 0.2) * 6, 30);
+          camera.lookAt(0, 0, 0);
+        }
 
         composer.render();
       }
@@ -787,8 +838,8 @@
           clearTimeout(glitchTimeoutId);
           glitchTimeoutId = null;
         }
-        tunnelGeometry.dispose();
-        tunnelMaterial.dispose();
+        if (tunnelGeometry) tunnelGeometry.dispose();
+        if (tunnelMaterial) tunnelMaterial.dispose();
         shapes.forEach((s) => {
           s.geometry.dispose();
           s.material.dispose();
@@ -796,7 +847,7 @@
         if (composer.renderTarget1) composer.renderTarget1.dispose();
         if (composer.renderTarget2) composer.renderTarget2.dispose();
         if (bloomPass.dispose) bloomPass.dispose();
-        if (glitchPass.dispose) glitchPass.dispose();
+        if (glitchPass && glitchPass.dispose) glitchPass.dispose();
         renderer.dispose();
         canvas.removeEventListener('pointermove', onPointerMove);
         canvas.removeEventListener('pointerdown', onPointerDown);
@@ -809,8 +860,10 @@
           running = true;
           clock.start();
           resize();
-          canvas.addEventListener('pointermove', onPointerMove);
-          canvas.addEventListener('pointerdown', onPointerDown);
+          if (showHolograms) {
+            canvas.addEventListener('pointermove', onPointerMove);
+            canvas.addEventListener('pointerdown', onPointerDown);
+          }
           renderer.setAnimationLoop(renderFrame);
         },
         stop() {
@@ -825,7 +878,9 @@
      * Effect: Prismatic Nebula
      * Swarming particles orbit crystalline shards inside a color-shifting fog.
      */
-    function createPrismaticNebulaEffect(canvas) {
+    function createPrismaticNebulaEffect(canvas, options = {}) {
+      const showStars = options.showStars !== false;
+      const showShards = options.showShards !== false;
       const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setClearColor(0x000000, 1);
@@ -843,43 +898,49 @@
       ];
       let paletteIndex = 0;
 
-      const starsGeometry = new THREE.BufferGeometry();
+      const starsGeometry = showStars ? new THREE.BufferGeometry() : null;
       const starCount = 1500;
-      const positions = new Float32Array(starCount * 3);
-      for (let i = 0; i < starCount; i++) {
-        const i3 = i * 3;
-        const radius = Math.random() * 120 + 20;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos((Math.random() * 2) - 1);
-        positions[i3] = Math.sin(phi) * Math.cos(theta) * radius;
-        positions[i3 + 1] = Math.sin(phi) * Math.sin(theta) * radius;
-        positions[i3 + 2] = Math.cos(phi) * radius;
+      let starsMaterial = null;
+      let stars = null;
+      if (showStars) {
+        const positions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+          const i3 = i * 3;
+          const radius = Math.random() * 120 + 20;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos((Math.random() * 2) - 1);
+          positions[i3] = Math.sin(phi) * Math.cos(theta) * radius;
+          positions[i3 + 1] = Math.sin(phi) * Math.sin(theta) * radius;
+          positions[i3 + 2] = Math.cos(phi) * radius;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        starsMaterial = new THREE.PointsMaterial({ color: palettes[0].c1, size: 0.6, transparent: true, opacity: 0.8 });
+        stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
       }
-      starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      const starsMaterial = new THREE.PointsMaterial({ color: palettes[0].c1, size: 0.6, transparent: true, opacity: 0.8 });
-      const stars = new THREE.Points(starsGeometry, starsMaterial);
-      scene.add(stars);
 
-      const shardGeo = new THREE.IcosahedronGeometry(6, 1);
-      const shardMat = new THREE.MeshStandardMaterial({
-        color: palettes[0].c2,
-        metalness: 0.8,
-        roughness: 0.15,
-        transparent: true,
-        opacity: 0.9,
-        emissive: new THREE.Color(0x111111),
-        emissiveIntensity: 0.8,
-      });
-
-      const shardCount = 14;
       const shards = [];
-      for (let i = 0; i < shardCount; i++) {
-        const shard = new THREE.Mesh(shardGeo.clone(), shardMat.clone());
-        shard.position.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
-        shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-        shard.scale.setScalar(0.6 + Math.random() * 1.8);
-        scene.add(shard);
-        shards.push(shard);
+      if (showShards) {
+        const shardGeo = new THREE.IcosahedronGeometry(6, 1);
+        const shardMat = new THREE.MeshStandardMaterial({
+          color: palettes[0].c2,
+          metalness: 0.8,
+          roughness: 0.15,
+          transparent: true,
+          opacity: 0.9,
+          emissive: new THREE.Color(0x111111),
+          emissiveIntensity: 0.8,
+        });
+
+        const shardCount = 14;
+        for (let i = 0; i < shardCount; i++) {
+          const shard = new THREE.Mesh(shardGeo.clone(), shardMat.clone());
+          shard.position.set((Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20);
+          shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+          shard.scale.setScalar(0.6 + Math.random() * 1.8);
+          scene.add(shard);
+          shards.push(shard);
+        }
       }
 
       const ambient = new THREE.AmbientLight(0x404040, 1.2);
@@ -911,8 +972,10 @@
         if (!running) return;
         const elapsed = clock.getElapsedTime();
 
-        stars.rotation.y = elapsed * 0.02;
-        stars.rotation.x = Math.sin(elapsed * 0.1) * 0.1;
+        if (stars) {
+          stars.rotation.y = elapsed * 0.02;
+          stars.rotation.x = Math.sin(elapsed * 0.1) * 0.1;
+        }
 
         shards.forEach((shard, i) => {
           shard.rotation.x += 0.005 + i * 0.0005;
@@ -929,7 +992,9 @@
         const blend = Math.min(1, (elapsed % 12) / 4);
 
         rimLight.color.lerpColors(new THREE.Color(palettes[paletteIndex].c2), new THREE.Color(nextPalette.c2), blend);
-        starsMaterial.color.lerpColors(new THREE.Color(palettes[paletteIndex].c1), new THREE.Color(nextPalette.c1), blend);
+        if (starsMaterial) {
+          starsMaterial.color.lerpColors(new THREE.Color(palettes[paletteIndex].c1), new THREE.Color(nextPalette.c1), blend);
+        }
         shards.forEach((shard) => {
           shard.material.color.lerpColors(new THREE.Color(palettes[paletteIndex].c2), new THREE.Color(nextPalette.c2), blend);
           shard.material.emissive.lerpColors(new THREE.Color(0x111111), new THREE.Color(palettes[paletteIndex].c2), 0.5);
@@ -944,8 +1009,8 @@
 
       function dispose() {
         renderer.setAnimationLoop(null);
-        starsGeometry.dispose();
-        starsMaterial.dispose();
+        if (starsGeometry) starsGeometry.dispose();
+        if (starsMaterial) starsMaterial.dispose();
         shards.forEach((shard) => {
           shard.geometry.dispose();
           shard.material.dispose();
@@ -980,6 +1045,20 @@
         factory: createCyberTunnelEffect,
       },
       {
+        id: 'grid-tunnel-solo',
+        name: 'Grid Tunnel (solo)',
+        description: 'Just the pulsing tunnel flow without the holographic totem for layering with other scenes.',
+        tags: ['WebGL', 'PostFX', 'Loop'],
+        factory: (canvas) => createCyberTunnelEffect(canvas, { enableTotem: false }),
+      },
+      {
+        id: 'totem-pulse',
+        name: 'Totem Pulse',
+        description: 'A standalone rotating totem with bloom-only highlights for lightweight overlays.',
+        tags: ['WebGL', 'Minimal', 'Bloom'],
+        factory: (canvas) => createCyberTunnelEffect(canvas, { enableTunnel: false, enableGlitch: false }),
+      },
+      {
         id: 'cybernoid-deep-dive',
         name: 'CYBERNOID: Deep Dive',
         description: 'Three morphing holograms pulse inside a warped tunnel with glitchable scrubbing and palette swaps.',
@@ -987,11 +1066,39 @@
         factory: createCybernoidDeepDiveEffect,
       },
       {
+        id: 'cybernoid-warp-tunnel',
+        name: 'CYBERNOID: Warp Tunnel',
+        description: 'The hypnotic CYBERNOID tunnel isolated for layering under other elements.',
+        tags: ['WebGL', 'Shaders', 'Loop'],
+        factory: (canvas) => createCybernoidDeepDiveEffect(canvas, { showHolograms: false }),
+      },
+      {
+        id: 'hologram-trio',
+        name: 'Hologram Trio',
+        description: 'The three morphing holograms without the tunnel shell for cleaner compositing.',
+        tags: ['WebGL', 'Shaders', 'Minimal'],
+        factory: (canvas) => createCybernoidDeepDiveEffect(canvas, { showTunnel: false, enableGlitch: false }),
+      },
+      {
         id: 'prismatic-nebula',
         name: 'Prismatic Nebula',
         description: 'Shifting shards and stardust swirling through a kaleidoscopic nebula.',
         tags: ['WebGL', 'Particles', 'Bloom'],
         factory: createPrismaticNebulaEffect,
+      },
+      {
+        id: 'stardust-drift',
+        name: 'Stardust Drift',
+        description: 'The sparkling Prismatic starfield on its own as a gentle looping background.',
+        tags: ['WebGL', 'Particles', 'Loop'],
+        factory: (canvas) => createPrismaticNebulaEffect(canvas, { showShards: false }),
+      },
+      {
+        id: 'crystal-bloom',
+        name: 'Crystal Bloom',
+        description: 'Floating crystalline shards with rim lighting and palette shifts, without the surrounding dust.',
+        tags: ['WebGL', 'Bloom', 'Minimal'],
+        factory: (canvas) => createPrismaticNebulaEffect(canvas, { showStars: false }),
       },
     ];
 
