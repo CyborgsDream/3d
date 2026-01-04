@@ -1651,13 +1651,17 @@
       gallery.append(card);
 
       const previewInstance = effect.factory(previewCanvas);
-      if (previewInstance && typeof previewInstance.start === 'function') previewInstance.start();
       const resizePreview = () => {
         if (previewInstance && typeof previewInstance.resize === 'function') {
           previewInstance.resize();
         }
       };
-      resizePreview();
+
+      requestAnimationFrame(() => {
+        if (previewInstance && typeof previewInstance.start === 'function') previewInstance.start();
+        resizePreview();
+      });
+
       previewResizers.push(resizePreview);
     });
 
